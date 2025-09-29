@@ -107,10 +107,9 @@ logs
 *.log
 
 # Lock files (keep one, ignore others)
-# Uncomment the one you DON'T use:
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
+# Using npm, so ignore other package managers:
+yarn.lock
+pnpm-lock.yaml
 
 # Local development
 .local
