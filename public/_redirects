@@ -1,0 +1,5 @@
+# Fallback for client-side routing
+/*    /index.html   200
+
+# Force HTTPS (optional)
+http://your-domain.pages.dev/*  https://your-domain.pages.dev/:splat  301!
