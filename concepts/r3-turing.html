@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Living Tissue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;700&family=Azeret+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: specimen cards over a living reaction-diffusion culture. Every spawn seeds new growth that spreads outward from the card */
+:root {
+  --dish: #08110f; --card: rgba(8,17,15,.86); --bone: #e7efe6; --mute: #8aa197; --line: rgba(231,239,230,.16); --coral: #ff7a59;
+  --sans: "Familjen Grotesk", system-ui, sans-serif; --mono: "Azeret Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--dish); color: var(--bone); font: 15px/1.5 var(--sans) }
+#culture { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: auto }
+header { position: relative; z-index: 2; display: flex; align-items: center; gap: 16px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font: 500 12px var(--mono); color: var(--mute) }
+header b { color: var(--bone); font-weight: 500 }
+header .gen { margin-left: auto; font-variant-numeric: tabular-nums }
+.back { font: 500 12px var(--mono); color: var(--dish); background: var(--bone); border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer }
+.back[hidden] { display: none }
+.back:focus-visible, .card:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px }
+main { position: relative; padding-block: 8px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#stage { position: relative; height: calc(100vh - 64px - 48px) }
+.card { position: absolute; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 14px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  transition: left .55s cubic-bezier(.2,1.2,.35,1), top .55s cubic-bezier(.2,1.2,.35,1), width .55s cubic-bezier(.2,1.2,.35,1), height .55s cubic-bezier(.2,1.2,.35,1), border-color .2s }
+.card.go { cursor: pointer }
+.card.go:hover { border-color: var(--coral) }
+.tag { font: 500 11px var(--mono); color: var(--mute); display: flex; justify-content: space-between; gap: 10px; text-transform: uppercase; letter-spacing: .06em }
+.tag .n { color: var(--coral) }
+.card h2 { margin: 0 0 4px; font: 700 clamp(22px, 2.3vw, 30px)/1.05 var(--sans); letter-spacing: -.02em }
+.card p { margin: 0; color: var(--mute) }
+.about { justify-content: center; gap: 12px }
+.about h1 { margin: 0; font: 700 clamp(28px, 3vw, 40px)/1 var(--sans); letter-spacing: -.03em }
+.email { font: 500 13px var(--mono); color: var(--coral); user-select: all; overflow-wrap: anywhere }
+.chips { display: flex; flex-wrap: wrap; gap: 6px } .chip { font: 500 11px var(--mono); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px }
+.bar { height: 4px; background: var(--line); border-radius: 4px; margin-top: 10px } .bar span { display: block; height: 100%; background: var(--coral); border-radius: 4px }
+@media (max-width: 700px) { #stage { height: auto } header .gen { display: none } }
+</style>
+</head>
+<body>
+<canvas id="culture" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>← Back</button>
+  <span id="crumb"><b>culture</b> / home</span>
+  <span class="gen" id="gen">gen 0</span>
+</header>
+<main><div id="stage"></div></main>
+<script src="kit2.js"></script>
+<script src="kit3.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+
+// Gray-Scott reaction-diffusion on a coarse grid, upscaled with smoothing
+const cv = document.getElementById('culture'), ctx = cv.getContext('2d')
+const off = document.createElement('canvas'), octx = off.getContext('2d')
+let GW = 0, GH = 0, U, V, U2, V2, img, gen = 0
+const CELL = 6, F = 0.0545, K = 0.062, DU = 1, DV = 0.5
+function setup() {
+  cv.width = innerWidth; cv.height = innerHeight
+  GW = Math.ceil(innerWidth / CELL); GH = Math.ceil(innerHeight / CELL)
+  off.width = GW; off.height = GH
+  U = new Float32Array(GW * GH).fill(1); V = new Float32Array(GW * GH); U2 = new Float32Array(GW * GH); V2 = new Float32Array(GW * GH)
+  img = octx.createImageData(GW, GH)
+  for (let i = 0; i < 14; i++) seed(Math.random() * innerWidth, Math.random() * innerHeight, 3)
+}
+function seed(px, py, r = 5) {
+  const cx = Math.round(px / CELL), cy = Math.round(py / CELL)
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    if (x * x + y * y > r * r) continue
+    const gx = cx + x, gy = cy + y
+    if (gx < 1 || gy < 1 || gx >= GW - 1 || gy >= GH - 1) continue
+    const i = gy * GW + gx; U[i] = .5; V[i] = .25 + Math.random() * .1
+  }
+}
+function step() {
+  for (let y = 1; y < GH - 1; y++) for (let x = 1; x < GW - 1; x++) {
+    const i = y * GW + x
+    const u = U[i], v = V[i], uvv = u * v * v
+    const lu = U[i - 1] + U[i + 1] + U[i - GW] + U[i + GW] - 4 * u
+    const lv = V[i - 1] + V[i + 1] + V[i - GW] + V[i + GW] - 4 * v
+    U2[i] = u + (DU * lu * .2 - uvv + F * (1 - u))
+    V2[i] = v + (DV * lv * .2 + uvv - (F + K) * v)
+  }
+  let t = U; U = U2; U2 = t; t = V; V = V2; V2 = t
+  gen++
+}
+function draw() {
+  const d = img.data
+  for (let i = 0, p = 0; i < V.length; i++, p += 4) {
+    const v = Math.min(1, V[i] * 3.2)
+    // dish → bone, with a coral tint where growth is densest
+    d[p] = 8 + v * (231 - 8) + (v > .8 ? (v - .8) * 120 : 0)
+    d[p + 1] = 17 + v * (239 - 17) - (v > .8 ? (v - .8) * 200 : 0)
+    d[p + 2] = 15 + v * (230 - 15) - (v > .8 ? (v - .8) * 250 : 0)
+    d[p + 3] = 255
+  }
+  octx.putImageData(img, 0, 0)
+  ctx.imageSmoothingEnabled = true
+  ctx.globalAlpha = .55
+  ctx.drawImage(off, 0, 0, cv.width, cv.height)
+  ctx.globalAlpha = 1
+}
+const genEl = document.getElementById('gen')
+function loop() {
+  for (let i = 0; i < 10; i++) step()
+  draw()
+  genEl.textContent = 'gen ' + gen.toLocaleString()
+  requestAnimationFrame(loop)
+}
+setup()
+if (Kit.reduced) { for (let i = 0; i < 2500; i++) step(); draw() } else requestAnimationFrame(loop)
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { setup(); if (Kit.reduced) { for (let i = 0; i < 2500; i++) step(); draw() } }, 200) })
+
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'card' + (spec.go ? ' go' : '') + (spec.about ? ' about' : '')
+  el.innerHTML = spec.html
+  if (spec.go) Kit.pressable(el, () => go(spec.go))
+  return el
+}
+const stage = Kit.Stage(document.getElementById('stage'), {
+  make,
+  layout: (k, W, H, ctx) => Kit.growLayout(k, W, H, { bento: ctx.home, cellH: 250, cellW: 350 }),
+  interval: 220,
+  enter: el => el.animate([{ transform: 'scale(.4)', opacity: 0, filter: 'blur(10px)' }, { transform: 'none', opacity: 1, filter: 'blur(0)' }], { duration: 480, easing: 'cubic-bezier(.2,.9,.3,1)' }),
+  exit: el => el.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(12px)', transform: 'scale(.9)' }], { duration: 200, fill: 'forwards' }),
+  // Each spawn inoculates the culture around the card's edges
+  onSpawn: el => setTimeout(() => {
+    const r = Kit.rectOf(el)
+    seed(r.left + r.width / 2, r.top - 8, 6); seed(r.left - 8, r.top + r.height / 2, 5); seed(r.right + 8, r.top + r.height / 2, 5); seed(r.left + r.width / 2, r.bottom + 8, 6)
+  }, 200),
+})
+
+const pad = n => String(n).padStart(2, '0')
+const home = () => SECTIONS.map((s, i) => s.id === 'about'
+  ? { go: 'about', about: true, html: `<span class="tag"><span>specimen 00 · host</span><span class="n">● live</span></span><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)}</p>
+      <span class="email">${esc(PERSON.email)}</span><div class="chips">${PERSON.skills.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div><p>${esc(PERSON.status)}</p>` }
+  : { go: s.id, html: `<span class="tag"><span>specimen ${pad(i + 1)} · ${s.path}</span><span class="n">${ITEMS[s.id].length} colonies</span></span><div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` })
+const section = id => ITEMS[id].map((it, i) => ({ html: `<span class="tag"><span>colony ${pad(i + 1)}</span><span class="n">${esc(it.meta)}</span></span><div><h2>${esc(it.title)}</h2><p>${esc(it.text)}</p>
+  ${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>` }))
+
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+const go = Kit.runApp(stage, {
+  home, section,
+  onView: t => { backBtn.hidden = t === 'home'; crumb.innerHTML = `<b>culture</b> / ${t === 'home' ? 'home' : esc(t === 'about' ? 'about' : SECTION[t].title.toLowerCase())}` },
+  afterSpawn: t => (t === 'home' ? document.querySelector('.card.go') : backBtn).focus({ preventScroll: true }),
+})
+backBtn.addEventListener('click', () => go('home'))
+go('home')
+</script>
+</body>
+</html>

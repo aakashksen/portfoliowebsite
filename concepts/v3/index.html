@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aakash Senthilnathan</title>
+<meta name="description" content="Aakash Senthilnathan: Computer Science and Statistics & Data Science at UC Santa Barbara. AI/ML engineering and software engineering.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Montserrat:wght@800&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap">
+<style>
+/* v3.1: Experience + Projects on the left, me in the middle, the resume on the right.
+   Same mechanic as Origin: dot field, cards spawn in and push aside, any card zooms into its write-up. */
+:root {
+  --bg: #08090b; --card: #0f1013; --card-hi: #15161a; --panel: #0d0e11;
+  --line: rgba(255,255,255,.08); --line-mid: rgba(255,255,255,.14); --line-hi: rgba(255,255,255,.26);
+  --fg: #ededee; --soft: #b9bbc1; --muted: #80838b; --faint: #5b5e66;
+  --cs: #8cb4f5; --st: #e3b766; --now: #7ed6a2;
+  --paper: #f4f2ed; --ink: #1c1c1e; --ink-soft: #46464b; --hit: #e6ecfa;
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --serif: "Newsreader", Georgia, serif;
+  --r: 8px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html { -webkit-text-size-adjust: 100% }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased }
+button { font: inherit; color: inherit }
+a { color: inherit }
+svg { flex: none }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+:focus-visible { outline: 2px solid var(--cs); outline-offset: 3px }
+
+/* Header: only a way back, shown once you leave home */
+body > header { position: relative; z-index: 3; display: flex; align-items: center; gap: 14px; height: 60px;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)) }
+.crumb { font: 400 13px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.crumb b { color: var(--fg); font-weight: 500 }
+.back { flex: none; font: 500 13px var(--mono); background: var(--card); border: 1px solid var(--line-mid); border-radius: var(--r); padding: 7px 12px; cursor: pointer }
+.back[hidden] { display: none }
+.back:hover { border-color: var(--line-hi) }
+
+main { position: relative; padding: 4px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)) }
+#stage { position: relative; height: calc(100vh - 60px - 52px); min-height: 600px; transition: opacity .3s, filter .3s }
+#stage.dim { opacity: .2; filter: blur(2px) }
+
+/* Cards */
+.card { position: absolute; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 22px; overflow: hidden;
+  display: flex; flex-direction: column; gap: 14px;
+  transition: left .55s cubic-bezier(.2,1.15,.35,1), top .55s cubic-bezier(.2,1.15,.35,1), width .55s cubic-bezier(.2,1.15,.35,1), height .55s cubic-bezier(.2,1.15,.35,1), border-color .2s, background .2s, translate .25s, box-shadow .25s }
+.card[role=button] { cursor: pointer }
+.card[role=button]:hover { border-color: var(--line-hi); background: var(--card-hi); translate: 0 -3px; box-shadow: 0 18px 40px -24px rgba(0,0,0,.9) }
+.card > * { transition: opacity .3s }
+.card.compact > * { opacity: 0 }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px }
+.go { font: 400 12px var(--mono); color: var(--muted); white-space: nowrap; transition: color .2s, translate .2s }
+.card:hover .head .go { color: var(--fg); translate: 3px 0 }
+h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balance }
+.blurb { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); text-wrap: pretty }
+.sq { display: inline-block; width: 7px; height: 7px; border-radius: 1.5px; flex: none }
+.sq.cs { background: var(--cs) } .sq.st { background: var(--st) }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--now); flex: none }
+.cap { font: 400 12px var(--mono); color: var(--muted) }
+
+/* Corner rows: each row opens its own write-up */
+.corner { justify-content: space-between }
+.rows { list-style: none; margin: 0 -10px; padding: 0; display: flex; flex-direction: column }
+.rows li { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: baseline; gap: 12px; padding: 7px 10px; border-top: 1px solid var(--line); font-size: 13.5px; border-radius: 6px; transition: background .15s }
+.rows li:hover { background: rgba(255,255,255,.07); border-top-color: transparent }
+.rows li:hover + li { border-top-color: transparent }
+.rows b { font-weight: 500; white-space: nowrap }
+.rows span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; transition: color .15s }
+.rows li:hover span { color: var(--soft) }
+.rows em { font: normal 400 12px var(--mono); color: var(--muted); display: inline-flex; align-items: center; gap: 6px; min-width: 3.4em; justify-content: flex-end }
+.rows em.now { color: var(--now) }
+.livecard { cursor: default; gap: 12px }
+.livecard { cursor: default; gap: 14px }
+.tiles { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-height: 0 }
+.tile { --tbg: #f4f2ed; --tfg: #17171a; --tac: #17171a; --tacfg: #fff;
+  position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r); text-decoration: none;
+  background: var(--tbg); color: var(--tfg); box-shadow: 0 0 0 1px rgba(255,255,255,.06); transition: translate .25s, box-shadow .25s }
+.tile:hover { translate: 0 -3px; box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 20px 40px -20px color-mix(in srgb, var(--tac) 70%, transparent) }
+.shot { position: relative; flex: 1 1 auto; min-height: 60px; overflow: hidden }
+.shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: scale .6s cubic-bezier(.2,.8,.2,1) }
+.tile:hover .shot img { scale: 1.06 }
+.badge { position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 7px; font: 500 11px var(--mono); letter-spacing: .02em;
+  color: #fff; background: rgba(10,14,10,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 999px; padding: 4px 9px 4px 8px }
+.pulse { position: relative; width: 7px; height: 7px; border-radius: 50%; background: #5fe08a; flex: none }
+.pulse::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: ping 1.8s cubic-bezier(0,0,.2,1) infinite }
+@keyframes ping { 70%, 100% { transform: scale(2.6); opacity: 0 } }
+.tbody { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 14px }
+.brand { display: flex; align-items: center; gap: 7px; min-width: 0 }
+.brand .leaf { width: 17px; height: 17px; color: var(--tac) }
+.brand b { font: 800 17px/1 Montserrat, var(--sans); letter-spacing: .01em }
+.brand .url { margin-left: auto; font: 400 11px var(--mono); opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.tbody p { margin: 0; font-size: 13px; line-height: 1.4; opacity: .82; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.cta { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; font: 600 13px var(--sans); color: var(--tacfg); background: var(--tac);
+  border-radius: 999px; padding: 8px 14px 8px 16px; transition: filter .2s, gap .2s }
+.tile:hover .cta { filter: brightness(1.12); gap: 12px }
+.btn.livebtn { --tac: var(--fg); --tacfg: #0b0b0d; background: var(--tac); color: var(--tacfg); border-color: var(--tac); font-family: var(--sans); font-weight: 600; border-radius: 999px; padding-inline: 12px 14px }
+.btn.livebtn:hover { background: var(--tac); border-color: var(--tac); filter: brightness(1.12) }
+.livebtn .arr { transition: translate .2s } .livebtn:hover .arr { translate: 3px 0 }
+@media (prefers-reduced-motion: reduce) { .pulse::after { animation: none } }
+.empty { flex: 1 1 auto; min-height: 60px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px dashed var(--line-mid); border-radius: var(--r); font: 400 12.5px var(--mono); color: var(--muted) }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; font: 500 12.5px var(--mono); color: var(--fg); background: rgba(255,255,255,.03); border: 1px solid var(--line-mid); border-radius: var(--r); padding: 8px 12px; cursor: pointer; text-decoration: none; white-space: nowrap; transition: border-color .15s, background .15s }
+.btn:hover { border-color: var(--line-hi); background: rgba(255,255,255,.08) }
+.btn.primary { background: var(--fg); color: #0b0b0d; border-color: var(--fg) }
+.btn.primary:hover { background: #fff }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap }
+.btngrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.btngrid .btn { padding-inline: 6px }
+
+/* About (centre) */
+.about { cursor: default; padding: 0; gap: 0 }
+.portrait { width: 100%; flex: 1 1 auto; min-height: 110px; object-fit: cover; object-position: 50% 22%; display: block; border-bottom: 1px solid var(--line); filter: saturate(.9) }
+.who { padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 13px }
+.who h1 { margin: 0; font: 400 clamp(28px, 2.4vw, 34px)/1.05 var(--serif); letter-spacing: -.015em }
+.mj { display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; color: var(--soft) }
+.mj span { display: flex; align-items: center; gap: 9px }
+.mj .cap { margin-top: 2px }
+.thesis { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.5; text-wrap: pretty }
+.focus { display: flex; flex-direction: column; gap: 6px; padding: 11px 0; border-block: 1px solid var(--line) }
+.focus .what { display: flex; flex-wrap: wrap; gap: 4px 10px; font: 500 15px var(--sans) }
+.focus .what i { color: var(--faint); font-style: normal }
+.focus .open { display: flex; align-items: center; gap: 8px }
+
+/* Resume card + paper */
+.resumecard { gap: 14px }
+.paperwrap { position: relative; flex: 1 1 auto; min-height: 120px; overflow: hidden; border-radius: 4px; background: var(--paper) }
+.paperwrap::after { content: ""; position: absolute; inset: auto 0 0; height: 30%; background: linear-gradient(transparent, var(--card)); pointer-events: none; transition: background .2s }
+.card:hover .paperwrap::after { background: linear-gradient(transparent, var(--card-hi)) }
+.paperwrap .paper { position: absolute; top: 0; left: 0; width: 816px; transform-origin: 0 0; transform: scale(var(--s, .4)); pointer-events: none }
+.paper { background: var(--paper); color: var(--ink); font: 400 14.5px/1.45 var(--serif); padding: 40px 48px 48px }
+.paper .pname { text-align: center; font: 600 30px/1.1 var(--serif); margin: 0 0 6px }
+.paper .pcontact { text-align: center; font-size: 13.5px; color: var(--ink-soft); margin: 0 0 6px }
+.paper .pcontact a { text-decoration: none } .paper .pcontact a:hover { text-decoration: underline }
+.psec { margin-top: 14px; scroll-margin-top: 16px }
+.psec > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1.5px solid var(--ink); padding-bottom: 2px; margin-bottom: 6px }
+.psec h4 { margin: 0; font: 600 19px/1.2 var(--serif) }
+.pmore { font: 500 11.5px var(--mono); color: var(--ink); background: none; border: 1px solid rgba(0,0,0,.25); border-radius: 6px; padding: 3px 8px; cursor: pointer }
+.pmore:hover { background: var(--ink); color: var(--paper); border-color: var(--ink) }
+.pent { position: relative; padding: 5px 10px; margin: 0 -10px; border-radius: 6px; transition: background .15s, box-shadow .15s }
+.pent .row { display: flex; justify-content: space-between; gap: 16px; align-items: baseline }
+.pent .row b { font-weight: 600 }
+.pent .row span { white-space: nowrap; font-size: 13.5px }
+.pent .org { font-style: italic; font-size: 13.5px; color: var(--ink-soft) }
+.pent ul { margin: 3px 0 0; padding-left: 20px }
+.pent li { margin: 1px 0; color: #2a2a2d }
+.pent p { margin: 2px 0 0 }
+.pent.hit { cursor: pointer }
+.pent.hit:hover, .pent.hit:focus-visible { background: var(--hit); box-shadow: inset 0 0 0 1px rgba(40,70,140,.18); outline: none }
+.pent .open { position: absolute; top: 5px; right: 10px; font: 500 11px var(--mono); color: #fff; background: #23314f; border-radius: 5px; padding: 3px 7px; opacity: 0; translate: 0 2px; transition: opacity .15s, translate .15s; pointer-events: none }
+.pent.hit:hover .open, .pent.hit:focus-visible .open { opacity: 1; translate: 0 0 }
+.pent.hit:hover .row span, .pent.hit:focus-visible .row span { visibility: hidden }
+.pskills { margin: 2px 0 }
+
+/* Spawned entry cards */
+.entry { gap: 12px }
+.etop { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 400 12px var(--mono); color: var(--muted) }
+.nowtag { display: inline-flex; align-items: center; gap: 6px; color: var(--now) }
+.role { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.35 }
+.sum { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.55; text-wrap: pretty }
+.nums { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line) }
+.nums > div { padding: 10px 0; display: flex; flex-direction: column; gap: 3px; min-width: 0 }
+.nums > div + div { padding-left: 14px; border-left: 1px solid var(--line) }
+.nums > div:only-child { grid-column: 1 / -1 }
+.nums b { font: 500 19px/1.1 var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums }
+.nums span { font-size: 12px; color: var(--muted); line-height: 1.35 }
+.lens { display: flex; flex-direction: column; gap: 5px }
+.lens div { display: grid; grid-template-columns: auto 3.3em minmax(0,1fr); align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--soft) }
+.lens b { font: 500 11px var(--mono); color: var(--muted); letter-spacing: .02em }
+.more { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 400 12px var(--mono); color: var(--muted) }
+.card:hover .more > span:first-child { color: var(--fg) }
+
+/* Zoom */
+.zoom { position: fixed; z-index: 10; background: var(--panel); border: 1px solid var(--line-mid); border-radius: 10px; overflow: hidden; transform-origin: 0 0; box-shadow: 0 40px 120px -30px rgba(0,0,0,.9) }
+.zoom .short { position: absolute; inset: 0; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; pointer-events: none }
+.zoom .long { position: absolute; inset: 0; overflow-y: auto; padding: 30px clamp(20px, 4.5vw, 56px) 56px; overscroll-behavior: contain }
+.x { position: absolute; z-index: 2; top: 14px; right: 14px; font: 500 12px var(--mono); background: var(--card); border: 1px solid var(--line-mid); border-radius: var(--r); padding: 6px 10px; cursor: pointer }
+.x:hover { border-color: var(--line-hi) }
+.kick { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font: 400 12px var(--mono); color: var(--muted); padding-right: 90px }
+.long h3 { margin: 14px 0 6px; font: 400 clamp(36px, 5vw, 60px)/1 var(--serif); letter-spacing: -.02em; text-wrap: balance }
+.long .sub { margin: 0 0 22px; color: var(--muted); font-size: 16px }
+.lede { margin: 0 0 34px; max-width: 62ch; font: 400 clamp(18px, 1.7vw, 21px)/1.5 var(--serif); color: var(--fg); text-wrap: pretty }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 48px; align-items: start }
+.sect { font: 500 11.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding-bottom: 10px; border-bottom: 1px solid var(--line); margin: 0 0 4px }
+.rail .sect:not(:first-child) { margin-top: 30px }
+.built { list-style: none; margin: 0; padding: 0 }
+.built li { display: grid; grid-template-columns: 2.4em minmax(0,1fr); gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line) }
+.built .i { font: 400 12px/1.9 var(--mono); color: var(--faint) }
+.built h4 { margin: 0 0 4px; font: 600 16px/1.35 var(--sans) }
+.built p { margin: 0; color: var(--soft); font-size: 15px; line-height: 1.65; max-width: 68ch }
+.bign { margin: 0 }
+.bign div { padding: 12px 0; border-bottom: 1px solid var(--line) }
+.bign dt { font: 500 24px/1.1 var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums }
+.bign dd { margin: 4px 0 0; font-size: 13px; color: var(--muted); line-height: 1.4 }
+.rail .lens, .rail .btnrow { padding-top: 12px }
+.stack { margin: 12px 0 0; font: 400 13px/1.7 var(--mono); color: var(--soft) }
+
+/* Resume view */
+.rcols { display: grid; grid-template-columns: minmax(0, 816px) 230px; gap: 36px; justify-content: center; align-items: start }
+.rcols .paper { border-radius: 4px; box-shadow: 0 30px 80px -40px rgba(0,0,0,.8) }
+.rrail { position: sticky; top: 0; display: flex; flex-direction: column; gap: 8px }
+.rrail .sect { margin-top: 22px } .rrail .sect:first-child { margin-top: 0 }
+.rrail > .btn { justify-content: flex-start }
+.rrail .btngrid { grid-template-columns: 1fr } .rrail .btngrid .btn { justify-content: flex-start; padding-inline: 12px }
+.jump { display: flex; flex-direction: column }
+.jump button { all: unset; cursor: pointer; display: flex; justify-content: space-between; padding: 7px 2px; border-bottom: 1px solid var(--line); font-size: 13.5px; color: var(--soft) }
+.jump button:hover { color: var(--fg) }
+.jump button:focus-visible { outline: 2px solid var(--cs) }
+.hint { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 6px 0 0 }
+
+@media (max-width: 1100px) { .rcols { grid-template-columns: 1fr } .rrail { position: static } }
+@media (max-width: 860px) { .cols { grid-template-columns: 1fr; gap: 28px } }
+@media (max-width: 700px) {
+  #stage { height: auto; min-height: 0 }
+  .rcols .paper { padding: 24px 18px 28px; font-size: 13.5px; margin-inline: -8px }
+  .rcols .paper .pname { font-size: 24px }
+  .rcols .pent .row { flex-direction: column; gap: 0 }
+  .rcols .pent .open { display: none }
+}
+@media (prefers-reduced-motion: reduce) { .card[role=button]:hover { translate: none } }
+</style>
+
+<canvas id="field" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>← Back</button>
+  <span class="crumb" id="crumb"></span>
+</header>
+<main><div id="stage"></div></main>
+
+<script src="../kit2.js"></script>
+<script src="content.js"></script>
+<script src="resume.js"></script>
+<script>
+const { PERSON, SECTION, ITEMS, esc } = Kit
+const LENS = { cs: 'CS', st: 'Stats' }
+const PDF = { href: 'resume.pdf', name: 'Aakash_Senthilnathan_Resume.pdf' }
+const MD = { href: 'resume.md', name: 'Aakash_Senthilnathan_Resume.md' }
+const LEAF = '<svg class="leaf" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5C4.5 10.5 10 4.8 20 4c-.6 9.6-6.3 15.5-15.5 15.5z" fill="currentColor" opacity=".9"/><path d="M4.5 19.5L14.5 9.5" stroke="var(--tbg, #fff)" stroke-width="1.4" fill="none"/></svg>'
+const ICON = {
+  mail: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="m2 4 6 5 6-5"/></svg>',
+  down: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 2v8m-3.5-3.5L8 10l3.5-3.5M2.5 13.5h11"/></svg>',
+  linkedin: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13ZM7.12 20.45H3.56V9h3.56v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z"/></svg>',
+  github: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.07 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3"/></svg>',
+  ext: '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 3h8v8M13 3 3 13"/></svg>',
+}
+
+// ---------- Dot field: present but quiet ----------
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 18, speed: 700, band: 110, life: 1900, push: 14,
+  render(ctx, dots) {
+    ctx.fillStyle = '#ffffff'
+    for (const d of dots) { const s = 1 + d.e * 1.6; ctx.globalAlpha = 0.07 + d.e * 0.6; ctx.fillRect(d.x - s / 2, d.y - s / 2, s, s) }
+    ctx.globalAlpha = 1
+  },
+})
+const clickRipple = el => { const c = Kit.centerOf(el); field.ripple(c.x, c.y, 1.4) }
+const softRipple = (P, s = .6) => field.ripple(P.x, P.y, s)
+
+// ---------- Layout ----------
+const stageEl = document.getElementById('stage')
+let cards = [], view = null, busy = false
+const GAP = 16
+const viewH = () => Math.min(stageEl.clientHeight, innerHeight - 112)
+const narrow = () => innerWidth <= 700
+function measure(el, w) {
+  const t = el.style.transition, ow = el.style.width, oh = el.style.height
+  el.style.transition = 'none'; el.style.width = w + 'px'; el.style.height = 'auto'
+  const n = el.offsetHeight
+  el.style.width = ow; el.style.height = oh; el.style.transition = t
+  return n
+}
+// Home cards are always in this order: experience, resume, projects, live, about.
+// Intro (4 cards): a tight 2x2 square. Full (5): those four in the corners, About in the tall centre column.
+function homeLayout(k, els) {
+  const W = stageEl.clientWidth, H = viewH()
+  if (narrow()) {
+    const order = k === 5 ? [4, 0, 2, 1, 3] : [0, 2, 1, 3], out = []
+    let y = 0
+    for (const i of order) {
+      const el = els && els[i], min = i === 4 ? 560 : i === 1 ? 380 : 180
+      const h = i === 1 ? min : el ? Math.max(min, measure(el, W)) : min
+      out[i] = { x: 0, y, w: W, h }; y += h + GAP
+    }
+    return out
+  }
+  if (k === 4) {
+    const s = 140, g = 10, x0 = (W - (2 * s + g)) / 2, y0 = (H - (2 * s + g)) / 2
+    return [0, 1, 2, 3].map(i => ({ x: x0 + (i % 2) * (s + g), y: y0 + Math.floor(i / 2) * (s + g), w: s, h: s }))
+  }
+  const maxW = Math.min(W, 1180), cw = (maxW - 2 * GAP) / 3, ch = Math.min(310, (H - GAP) / 2), full = 2 * ch + GAP
+  const x0 = (W - maxW) / 2, y0 = Math.max(0, (H - full) / 2), xr = x0 + 2 * (cw + GAP)
+  return [{ x: x0, y: y0, w: cw, h: ch }, { x: xr, y: y0, w: cw, h: ch },
+    { x: x0, y: y0 + ch + GAP, w: cw, h: ch }, { x: xr, y: y0 + ch + GAP, w: cw, h: ch },
+    { x: x0 + cw + GAP, y: y0, w: cw, h: full }]
+}
+function entryLayout(els) {
+  const k = els.length, W = stageEl.clientWidth, cols = Math.min(k, W >= 1150 ? 3 : W >= 720 ? 2 : 1)
+  const cw = Math.min(380, (W - GAP * (cols - 1)) / cols)
+  const hs = els.map(el => measure(el, cw))
+  const rows = Math.ceil(k / cols), rowH = []
+  for (let r = 0; r < rows; r++) rowH.push(Math.max(240, ...hs.slice(r * cols, r * cols + cols)))
+  const totalH = rowH.reduce((a, b) => a + b, 0) + (rows - 1) * GAP
+  let y = Math.max(0, (viewH() - totalH) / 2)
+  const out = []
+  for (let r = 0; r < rows; r++) {
+    const inRow = Math.min(cols, k - r * cols), rowW = inRow * cw + (inRow - 1) * GAP
+    for (let c = 0; c < inRow; c++) out.push({ x: (W - rowW) / 2 + c * (cw + GAP), y, w: cw, h: rowH[r] })
+    y += rowH[r] + GAP
+  }
+  return out
+}
+const layoutFor = () => view === 'home' ? homeLayout(cards.length, cards) : entryLayout(cards)
+function place(el, r, instant) {
+  if (instant) el.style.transition = 'none'
+  Object.assign(el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' })
+  if (instant) { el.offsetWidth; el.style.transition = '' }
+}
+function fit(R) { stageEl.style.minHeight = Math.max(...R.map(r => r.y + r.h)) + 'px' }
+let rt
+addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!cards.length) return; const R = layoutFor(); cards.forEach((c, i) => place(c, R[i], true)); fit(R) }, 80) })
+
+// The mini resume scales to whatever width its card has
+const paperRO = new ResizeObserver(es => es.forEach(e => e.target.style.setProperty('--s', e.contentRect.width / 816)))
+
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'card ' + (spec.cls || '')
+  el.innerHTML = spec.html
+  el.spec = spec
+  el.addEventListener('click', e => {
+    const row = e.target.closest('[data-open]')
+    if (row) { e.stopPropagation(); field.ripple(e.clientX, e.clientY, 1.4); const [sec, i] = row.dataset.open.split(':'); openItem(sec, ITEMS[sec][+i], el); return }
+    const mail = e.target.closest('[data-mail]')
+    if (mail) copyMail(mail)
+  })
+  if (spec.go || spec.zoom) {
+    Kit.pressable(el, e => {
+      if (e && e.target && e.target.closest && e.target.closest('a, button, [data-open]')) return
+      clickRipple(el)
+      spec.zoom ? openZoom(el, { kind: spec.zoom, item: spec.item, card: el }) : go(spec.go, el)
+    })
+    el.setAttribute('aria-label', spec.label || '')
+  }
+  el.querySelectorAll('a, button, [data-open]').forEach(a => a.addEventListener('keydown', e => {
+    e.stopPropagation()
+    if (a.dataset.open && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); a.click() }
+  }))
+  const pw = el.querySelector('.paperwrap'); if (pw) paperRO.observe(pw)
+  return el
+}
+// Background tabs pause animations, so never wait on one for longer than it should take
+const settle = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms + 150))])
+async function addGroup(specs, rectsFor, P, stagger = 45, extra) {
+  const fresh = specs.map(make)
+  if (extra) fresh.forEach(extra)
+  fresh.forEach(el => stageEl.append(el))
+  cards.push(...fresh)
+  const rects = typeof rectsFor === 'function' ? rectsFor(cards) : rectsFor
+  cards.forEach((c, i) => place(c, rects[i], fresh.includes(c)))
+  fit(rects)
+  if (Kit.reduced) return fresh
+  await Promise.all(fresh.map((el, i) => {
+    const r = el.getBoundingClientRect()
+    return el.animate([{ transform: `translate(${P.x - (r.left + r.width / 2)}px,${P.y - (r.top + r.height / 2)}px) scale(.25)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
+      { duration: 480, delay: i * stagger, easing: 'cubic-bezier(.2,1.1,.35,1)', fill: 'backwards' }).finished
+  }).map((p, i) => settle(p, 480 + i * stagger)))
+  return fresh
+}
+async function clearAll(P) {
+  const old = cards; cards = []
+  if (!Kit.reduced) await Promise.all(old.map((el, i) => {
+    const r = el.getBoundingClientRect()
+    return el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${P.x - (r.left + r.width / 2)}px,${P.y - (r.top + r.height / 2)}px) scale(.25)`, opacity: 0 }],
+      { duration: 240, delay: i * 15, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).finished
+  }).map((p, i) => settle(p, 240 + i * 15)))
+  old.forEach(el => { const pw = el.querySelector('.paperwrap'); if (pw) paperRO.unobserve(pw); el.remove() })
+}
+
+// ---------- Resume, rendered from resume.js (generated from the LaTeX) ----------
+const SECTION_OF = { Experience: 'experience', Projects: 'projects' }
+function siteItem(sec, e) {
+  const list = ITEMS[sec] || [], hay = `${e.title} ${e.org || ''}`
+  return list.find(it => hay.includes(it.title) || (it.alias && hay.includes(it.alias)))
+}
+function resumeHTML(live) {
+  const R = window.RESUME
+  return `<div class="paper">
+    <h1 class="pname">${esc(R.name)}</h1>
+    <p class="pcontact"><a href="mailto:${PERSON.email}">${esc(PERSON.email)}</a> &nbsp;|&nbsp; <a href="${PERSON.links[0].url}" target="_blank" rel="noopener">linkedin.com/in/aakashsenthilnathan</a> &nbsp;|&nbsp; <a href="${PERSON.links[1].url}" target="_blank" rel="noopener">github.com/aakashksen</a></p>
+    ${R.sections.map((s, si) => {
+      const sec = SECTION_OF[s.title]
+      return `<section class="psec"${live ? ` id="rs-${si}"` : ''}><header><h4>${esc(s.title)}</h4>${live && sec ? `<button class="pmore" type="button" data-section="${sec}">See details →</button>` : ''}</header>
+      ${s.entries.map(e => {
+        if (e.label) return `<p class="pskills"><b>${esc(e.label)}:</b> ${esc(e.text)}</p>`
+        const it = live && sec ? siteItem(sec, e) : null
+        const attrs = it ? ` class="pent hit" data-item="${sec}:${ITEMS[sec].indexOf(it)}" tabindex="0" role="button" aria-label="Open the ${esc(it.title)} write-up"` : ' class="pent"'
+        return `<div${attrs}>${it ? '<span class="open">Open write-up →</span>' : ''}
+          <div class="row"><b>${esc(e.title)}</b><span>${esc(e.dates)}</span></div>
+          ${e.org ? `<div class="org">${esc(e.org)}</div>` : ''}
+          ${e.bullets ? `<ul>${e.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}
+          ${e.lines ? e.lines.map(l => `<p>${l.label ? `<b>${esc(l.label)}:</b> ` : ''}${esc(l.text)}</p>`).join('') : ''}</div>`
+      }).join('')}</section>`
+    }).join('')}</div>`
+}
+const dlButtons = (cls = '') => `<a class="btn ${cls}" href="${PDF.href}" download="${PDF.name}">${ICON.down}Download PDF</a><a class="btn" href="${MD.href}" download="${MD.name}">${ICON.down}Markdown</a>`
+
+// ---------- Card markup ----------
+const nowTag = '<span class="nowtag"><span class="dot"></span>Now</span>'
+const lensHTML = lens => !lens ? '' : `<div class="lens">${Object.keys(LENS).filter(k => lens[k]).map(k =>
+  `<div><i class="sq ${k}"></i><b>${LENS[k]}</b><span>${esc(lens[k])}</span></div>`).join('')}</div>`
+const projLinks = it => [it.live && `<a class="btn livebtn" href="${it.live}" target="_blank" rel="noopener"${it.preview ? ` style="--tac:${it.preview.accent};--tacfg:${it.preview.accentFg}"` : ''}><span class="pulse"></span>Live site <span class="arr">→</span></a>`, it.source && `<a class="btn" href="${it.source}" target="_blank" rel="noopener">Source ${ICON.ext}</a>`].filter(Boolean).join('')
+const contactButtons = () => `<div class="btngrid">
+  <a class="btn" href="mailto:${PERSON.email}" data-mail title="${esc(PERSON.email)}">${ICON.mail}<span>Email</span></a>
+  ${PERSON.links.map(l => `<a class="btn" href="${l.url}" target="_blank" rel="noopener">${ICON[l.label.toLowerCase()] || ''}${esc(l.label)}</a>`).join('')}</div>`
+function copyMail(btn) {
+  // mailto opens a mail app if there is one; copying covers people without one
+  if (navigator.clipboard) navigator.clipboard.writeText(PERSON.email).then(() => {
+    const s = btn.querySelector('span'); if (!s) return
+    s.textContent = 'Copied'; setTimeout(() => { s.textContent = 'Email' }, 1600)
+  }, () => {})
+}
+
+function homeCard(id) {
+  if (id === 'about') return { cls: 'about', html: `<img class="portrait" src="${PERSON.photo}" alt="${esc(PERSON.name)}">
+    <div class="who">
+      <h1>${esc(PERSON.name)}</h1>
+      <div class="mj"><span><i class="sq cs"></i>${esc(PERSON.majors.cs)}</span><span><i class="sq st"></i>${esc(PERSON.majors.st)}</span>
+        <span class="cap">${esc(PERSON.school)} · Class of 2028</span></div>
+      <p class="thesis">${esc(PERSON.thesis)}</p>
+      <div class="focus"><span class="cap">Focus</span><div class="what"><span>AI / ML engineering</span><i>+</i><span>Software engineering</span></div>
+        <span class="cap open"><span class="dot"></span>Open to internships · ${esc(PERSON.season)}</span></div>
+      ${contactButtons()}
+    </div>` }
+  if (id === 'live') {
+    const live = ITEMS.projects.filter(p => p.live)
+    const gh = PERSON.links.find(l => l.label === 'GitHub')
+    const host = u => u.replace(/^https?:\/\//, '').replace(/\/$/, '')
+    const tile = (p, big) => {
+      const v = p.preview || {}
+      const theme = v.bg ? ` style="--tbg:${v.bg};--tfg:${v.fg};--tac:${v.accent};--tacfg:${v.accentFg}"` : ''
+      return `<a class="tile${big && v.img ? ' big' : ''}" href="${p.live}" target="_blank" rel="noopener"${theme}>
+        ${big && v.img ? `<div class="shot"><img src="${v.img}" alt="${esc(v.alt || p.title)}" loading="lazy"><span class="badge"><span class="pulse"></span>Live site</span></div>` : ''}
+        <div class="tbody">
+          <div class="brand">${LEAF}<b>${esc(p.title)}</b><span class="url">${esc(host(p.live))}</span></div>
+          ${big ? `<p>${esc(v.pitch || p.summary)}</p>` : ''}
+          <span class="cta">${esc(v.cta || 'Visit site')}<span class="arr">→</span></span>
+        </div></a>`
+    }
+    return { cls: 'corner livecard', html: `<div class="head"><h2>Live projects</h2><span class="go">${live.length ? `${live.length} live` : 'coming soon'}</span></div>
+      ${live.length ? `<div class="tiles">${live.map(p => tile(p, live.length === 1)).join('')}</div>`
+        : `<p class="blurb">Live versions of my projects are on the way. They will open from here.</p>
+           <div class="empty"><span class="dot" style="background:var(--faint)"></span>First live demos coming soon</div>
+           <div class="btnrow"><a class="btn" href="${gh.url}" target="_blank" rel="noopener">${ICON.github}Code on GitHub</a></div>`}` }
+  }
+  if (id === 'resume') return { zoom: 'resume', cls: 'resumecard', label: 'Resume: open the full resume', html: `<div class="head"><h2>Resume</h2><span class="go">Open →</span></div>
+    <div class="paperwrap">${resumeHTML(false)}</div>
+    <div class="btnrow">${dlButtons()}</div>` }
+  const list = ITEMS[id]
+  const right = it => id === 'experience' ? `<em class="${it.now ? 'now' : ''}">${it.now ? '<span class="dot"></span>now' : esc(it.yr)}</em>` : `<em>${esc(it.numbers[0][0])}</em>`
+  const blurb = id === 'experience' ? 'AI infrastructure, data engineering and backend.' : 'ML systems, from campus LLM serving to computer vision.'
+  return { go: id, cls: 'corner', label: `${SECTION[id].title}: open all`, html: `<div><div class="head"><h2>${SECTION[id].title}</h2><span class="go">${list.length} ${id === 'experience' ? 'roles' : 'projects'} →</span></div>
+    <p class="blurb">${blurb}</p></div>
+    <ul class="rows">${list.map((it, i) => `<li data-open="${id}:${i}" tabindex="0" role="button" aria-label="Open the ${esc(it.title)} write-up"><b>${esc(it.label || it.title)}</b><span>${esc(it.short)}</span>${right(it)}</li>`).join('')}</ul>` }
+}
+function entryCard(it) {
+  return { zoom: 'item', item: it, cls: 'entry', label: `${it.title}: read more`, html: `<div class="etop"><span>${esc(it.dates)}</span>${it.now ? nowTag : ''}</div>
+    <div><h2>${esc(it.title)}</h2><div class="role">${esc(it.role)}</div></div>
+    <p class="sum">${esc(it.summary)}</p>
+    <div class="nums">${it.numbers.slice(0, 2).map(([n, l]) => `<div><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join('')}</div>
+    ${lensHTML(it.lens)}<div class="more"><span>Read more →</span><span class="btnrow">${projLinks(it)}</span></div>` }
+}
+const HOME = ['experience', 'resume', 'projects', 'live', 'about']
+
+// ---------- Long write-ups ----------
+function longHTML(kind, it) {
+  if (kind === 'item') return `<div class="kick"><span>${esc(it.dates)}</span>${it.now ? nowTag : ''}</div>
+    <h3>${esc(it.title)}</h3><p class="sub">${esc(it.role)}</p>
+    <p class="lede">${esc(it.summary)}</p>
+    <div class="cols">
+      <div><div class="sect">What I built</div><ol class="built">${it.built.map(([h, p], i) => `<li><span class="i">0${i + 1}</span><div><h4>${esc(h)}</h4><p>${esc(p)}</p></div></li>`).join('')}</ol></div>
+      <aside class="rail">${projLinks(it) ? `<div class="sect">Links</div><div class="btnrow">${projLinks(it)}</div>` : ''}
+        <div class="sect">By the numbers</div><dl class="bign">${it.numbers.map(([n, l]) => `<div><dt>${esc(n)}</dt><dd>${esc(l)}</dd></div>`).join('')}</dl>
+        <div class="sect">Draws on</div>${lensHTML(it.lens)}
+        <div class="sect">Stack</div><p class="stack">${it.tags.map(esc).join(' · ')}</p></aside>
+    </div>`
+  // resume
+  const R = window.RESUME
+  return `<div class="kick"><span>/resume</span></div><h3 style="margin-bottom:26px">Resume</h3>
+    <div class="rcols">${resumeHTML(true)}
+      <aside class="rrail"><div class="sect">Download</div>${dlButtons('primary')}
+        <div class="sect">Jump to</div><div class="jump">${R.sections.map((s, i) => `<button type="button" data-jump="rs-${i}"><span>${esc(s.title)}</span><span>↓</span></button>`).join('')}</div>
+        <p class="hint">Hover an entry and click it to open its full write-up. “See details” opens that whole section.</p>
+        <div class="sect">Contact</div>${contactButtons()}</aside></div>`
+}
+
+// ---------- Navigation ----------
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+let zoomState = null
+function chrome() {
+  backBtn.hidden = view === 'home' && !zoomState
+  const parts = [view !== 'home' && view, zoomState && zoomState.title].filter(Boolean)
+  crumb.innerHTML = parts.map(p => `<b>${esc(p)}</b>`).join(' / ')
+}
+const centerOfStage = () => { const r = stageEl.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + Math.min(r.height, innerHeight - r.top) / 2 } }
+
+// ---------- Intro ----------
+// Four squares pop in at the centre and grow into the real cards, huddled together. Then my card opens from the
+// seam between them and shoves both columns out to their places. Everything is driven by damped springs.
+function springs(list, step, maxMs = 2000) {
+  return new Promise(done => {
+    let last = performance.now(), t0 = last, over = false
+    const finish = () => { if (!over) { over = true; list.forEach(s => { s.x = s.to; s.v = 0 }); step(); done() } }
+    setTimeout(finish, maxMs + 300) // rAF stops in background tabs
+    function frame(now) {
+      if (over) return
+      const dt = Math.min(.034, (now - last) / 1000), n = 4; last = now
+      for (let k = 0; k < n; k++) for (const s of list) {
+        if (now - t0 < (s.delay || 0)) continue
+        s.v += (-s.k * (s.x - s.to) - s.c * s.v) * dt / n; s.x += s.v * dt / n
+      }
+      step(now - t0)
+      if (list.every(s => Math.abs(s.x - s.to) < .3 && Math.abs(s.v) < 4) || now - t0 > maxMs) return finish()
+      requestAnimationFrame(frame)
+    }
+    requestAnimationFrame(frame)
+  })
+}
+async function intro() {
+  busy = true; view = 'home'; chrome()
+  if (narrow() || Kit.reduced) {
+    await addGroup(HOME.map(homeCard), els => homeLayout(5, els), centerOfStage(), 30)
+    busy = false; return
+  }
+  const R = homeLayout(5), A = R[4]
+  const cx = A.x + A.w / 2, cy = A.y + A.h / 2, s0 = 128, g0 = 10
+  const stageBox = stageEl.getBoundingClientRect(), P = { x: stageBox.left + cx, y: stageBox.top + cy }
+  // 1. Four squares pop in, tight around the exact point the finished layout is centred on
+  const square = [0, 1, 2, 3].map(i => ({ x: cx + (i % 2 ? g0 / 2 : -g0 / 2 - s0), y: cy + (i < 2 ? -g0 / 2 - s0 : g0 / 2), w: s0, h: s0 }))
+  softRipple(P, .7)
+  const four = await addGroup(HOME.slice(0, 4).map(homeCard), square, P, 55, el => el.classList.add('compact'))
+  await Kit.wait(120)
+  const set = (el, x, y, ww, hh) => Object.assign(el.style, { left: x + 'px', top: y + 'px', width: ww + 'px', height: hh + 'px' })
+  const corners = (w, h, gx, gy, ax, aw, off) => {
+    const L = ax - gx - w - off, Rx = ax + aw + gx + off, T = cy - gy / 2 - h, B = cy + gy / 2
+    set(four[0], L, T, w, h); set(four[1], Rx, T, w, h); set(four[2], L, B, w, h); set(four[3], Rx, B, w, h)
+  }
+  four.forEach(c => { c.style.transition = 'none' })
+  // 2. They grow into the real cards, still huddled at the centre, and their content appears
+  const grow = { cw: { x: s0, v: 0, to: R[0].w, k: 170, c: 22 }, ch: { x: s0, v: 0, to: R[0].h, k: 170, c: 22 } }
+  let shownC = false
+  await springs(Object.values(grow), () => {
+    corners(grow.cw.x, grow.ch.x, g0 / 2, g0, cx, 0, 0)
+    if (!shownC && grow.cw.x > s0 + (R[0].w - s0) * .6) { shownC = true; four.forEach(el => el.classList.remove('compact')) }
+  }, 1200)
+  four.forEach(el => el.classList.remove('compact'))
+  fit(R)
+  await Kit.wait(160)
+  // 3. My card opens from the seam between them and shoves both columns out to their places
+  const about = make(homeCard('about'))
+  about.classList.add('compact'); about.style.transition = 'none'; stageEl.append(about); cards.push(about)
+  const sp = {
+    aw: { x: 0, v: 0, to: A.w, k: 190, c: 21 },               // my card's width: fast, slight overshoot
+    ah: { x: 2 * R[0].h + g0, v: 0, to: A.h, k: 220, c: 30 },
+    gx: { x: g0 / 2, v: 0, to: GAP, k: 220, c: 30 },
+    gy: { x: g0, v: 0, to: GAP, k: 220, c: 30 },
+    kick: { x: 0, v: 200, to: 0, k: 150, c: 13, delay: 200 }, // the shove: ~11px recoil, then back to contact
+  }
+  softRipple(P, 1.2)
+  let shownA = false
+  await springs(Object.values(sp), () => {
+    const aw = Math.max(0, sp.aw.x), ax = cx - aw / 2
+    corners(R[0].w, R[0].h, sp.gx.x, sp.gy.x, ax, aw, sp.kick.x)
+    set(about, ax, cy - sp.ah.x / 2, aw, sp.ah.x)
+    about.style.borderWidth = aw < 2 ? '0' : ''
+    if (!shownA && aw > A.w * .55) { shownA = true; about.classList.remove('compact') }
+  })
+  cards.forEach((c, i) => { place(c, R[i], true); c.style.transition = ''; c.classList.remove('compact') })
+  about.style.borderWidth = ''
+  busy = false
+}
+async function go(target, fromEl) {
+  if (busy || target === view) return
+  busy = true
+  const P = fromEl ? Kit.centerOf(fromEl) : centerOfStage()
+  await clearAll(P)
+  view = target; chrome(); scrollTo(0, 0)
+  if (target === 'home') await addGroup(HOME.map(homeCard), els => homeLayout(5, els), P, 25)
+  else await addGroup(ITEMS[target].map(entryCard), entryLayout, P, 45)
+  softRipple(P, .5)
+  ;(target === 'home' ? stageEl.querySelector('.card[role=button]') : backBtn).focus({ preventScroll: true })
+  busy = false
+}
+// Jump straight to one write-up: spawn its section, then zoom into its card
+async function openItem(sec, item, fromEl) {
+  if (zoomState) await closeZoom()
+  if (busy) return
+  await go(sec, fromEl && fromEl.isConnected ? fromEl : null)
+  const card = cards.find(c => c.spec.item === item)
+  if (card) await openZoom(card, { kind: 'item', item, card })
+}
+async function openSection(sec) {
+  if (zoomState) await closeZoom()
+  await go(sec, null)
+}
+
+// ---------- Zoom ----------
+function zoomTarget() {
+  const pad = innerWidth < 700 ? 8 : 24, top = 60
+  return { x: pad + Math.max(0, (innerWidth - 2 * pad - 1180) / 2), y: top, w: Math.min(1180, innerWidth - 2 * pad), h: innerHeight - top - pad }
+}
+async function openZoom(src, { kind, item, card }) {
+  if (busy || zoomState) return
+  busy = true
+  const title = item ? item.title : kind
+  const from = src.getBoundingClientRect(), to = zoomTarget()
+  const z = document.createElement('section')
+  z.className = 'zoom'
+  z.setAttribute('role', 'dialog'); z.setAttribute('aria-modal', 'true'); z.setAttribute('aria-label', title)
+  z.innerHTML = `${card ? `<div class="short">${card.innerHTML}</div>` : ''}<div class="long">${longHTML(kind, item)}</div><button class="x" type="button">Close ✕</button>`
+  Object.assign(z.style, { left: to.x + 'px', top: to.y + 'px', width: to.w + 'px', height: to.h + 'px' })
+  document.body.append(z)
+  zoomState = { el: z, src, card, title: title.toLowerCase() }
+  z.querySelector('.x').addEventListener('click', closeZoom)
+  z.addEventListener('click', e => {
+    const t = e.target
+    const jump = t.closest('[data-jump]'); if (jump) { z.querySelector('#' + jump.dataset.jump).scrollIntoView({ behavior: Kit.reduced ? 'auto' : 'smooth', block: 'start' }); return }
+    const more = t.closest('[data-section]'); if (more) { openSection(more.dataset.section); return }
+    if (t.closest('a')) { const m = t.closest('[data-mail]'); if (m) copyMail(m); return }
+    const ent = t.closest('[data-item]'); if (ent) { const [sec, i] = ent.dataset.item.split(':'); openItem(sec, ITEMS[sec][+i]) }
+  })
+  z.addEventListener('keydown', e => { const ent = e.target.closest && e.target.closest('[data-item]'); if (ent && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); ent.click() } })
+  if (card) card.style.visibility = 'hidden'
+  stageEl.classList.add('dim'); chrome()
+  if (!Kit.reduced) {
+    const sx = from.width / to.w, sy = from.height / to.h
+    const opts = { duration: 500, easing: 'cubic-bezier(.2,.9,.25,1)' }
+    z.animate([{ transform: `translate(${from.left - to.x}px,${from.top - to.y}px) scale(${sx},${sy})` }, { transform: 'none' }], opts)
+    const sh = z.querySelector('.short'); if (sh) sh.animate([{ opacity: 1 }, { opacity: 0, offset: .3 }, { opacity: 0 }], opts)
+    z.querySelector('.long').animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 0, offset: .4 }, { opacity: 1, transform: 'none' }], opts)
+    await Kit.wait(500)
+  }
+  const sh = z.querySelector('.short'); if (sh) sh.remove()
+  z.querySelector('.x').focus({ preventScroll: true })
+  busy = false
+}
+async function closeZoom() {
+  if (!zoomState || busy) return
+  busy = true
+  const { el: z, src, card } = zoomState
+  const to = src.getBoundingClientRect(), from = z.getBoundingClientRect()
+  stageEl.classList.remove('dim')
+  if (!Kit.reduced) {
+    z.querySelector('.long').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' })
+    await z.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${to.left - from.left}px,${to.top - from.top}px) scale(${to.width / from.width},${to.height / from.height})`, opacity: .4 }],
+      { duration: 360, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished
+  }
+  z.remove(); if (card) card.style.visibility = ''
+  zoomState = null; chrome()
+  if (src.isConnected) src.focus({ preventScroll: true })
+  busy = false
+}
+
+backBtn.addEventListener('click', () => { if (zoomState) closeZoom(); else { clickRipple(backBtn); go('home', backBtn) } })
+Kit.onBack(() => zoomState ? closeZoom() : view !== 'home' && go('home', backBtn))
+intro()
+</script>
+</html>

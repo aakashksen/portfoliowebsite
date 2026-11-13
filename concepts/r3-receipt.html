@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Receipt Printer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Archivo+Black&display=swap">
+<style>
+/* Layout: receipts printed onto a dark counter. Each block prints line by line and shoves the others aside; back tears them off */
+:root {
+  --counter: #222428; --paper: #fbfaf4; --ink: #1b1b1b; --faded: #6d6a62; --red: #d2352b; --dot: #4a4d55;
+  --mono: "Courier Prime", "Courier New", monospace; --display: "Archivo Black", Impact, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--counter); color: var(--paper); font: 14px/1.4 var(--mono) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+header { position: relative; z-index: 2; display: flex; align-items: center; gap: 16px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font: 700 13px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: #b9b6ad }
+header .total { margin-left: auto; font-variant-numeric: tabular-nums }
+.back { font: 700 13px var(--mono); text-transform: uppercase; color: var(--paper); background: var(--red); border: 0; padding: 8px 14px; cursor: pointer }
+.back[hidden] { display: none }
+.back:focus-visible, .rc:focus-visible { outline: 2px dashed var(--paper); outline-offset: 4px }
+main { position: relative; padding-block: 8px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#stage { position: relative; height: calc(100vh - 64px - 48px) }
+.rc { position: absolute; background: var(--paper); color: var(--ink); padding: 16px 18px 24px; display: flex; flex-direction: column; gap: 6px; overflow: hidden;
+  filter: drop-shadow(0 12px 18px rgba(0,0,0,.45));
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 9px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 9px repeat-x;
+  mask: linear-gradient(#000 0 0) top / 100% calc(100% - 9px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 9px repeat-x;
+  transition: left .5s cubic-bezier(.2,1.2,.35,1), top .5s cubic-bezier(.2,1.2,.35,1), width .5s cubic-bezier(.2,1.2,.35,1), height .5s cubic-bezier(.2,1.2,.35,1) }
+.rc.go { cursor: pointer }
+.rc.go:hover { background: #fffef9 }
+.rc.go:hover .stamp { opacity: 1 }
+.hd { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--faded); text-transform: uppercase }
+.cut { border-top: 2px dashed #b9b4a6; margin: 4px 0 }
+.rc h2 { margin: 0; font: 400 clamp(22px, 2.2vw, 30px)/1 var(--display); text-transform: uppercase; letter-spacing: -.01em }
+.rc p { margin: 0 }
+.line { display: flex; gap: 6px; font-size: 13px } .line span:nth-child(2) { flex: 1; border-bottom: 2px dotted #c9c4b6; translate: 0 -4px } .line b { white-space: nowrap }
+.code { margin-top: auto; height: 30px; flex: none }
+.stamp { position: absolute; right: 12px; top: 44px; rotate: -10deg; border: 3px solid var(--red); color: var(--red); font: 700 13px var(--mono); padding: 2px 8px; text-transform: uppercase; opacity: 0; transition: opacity .15s }
+.about h1 { margin: 0; font: 400 clamp(26px, 2.8vw, 38px)/.95 var(--display); text-transform: uppercase; overflow-wrap: anywhere }
+.email { user-select: all; overflow-wrap: anywhere; font-weight: 700 }
+.center { text-align: center; font-size: 12px; color: var(--faded); text-transform: uppercase }
+@media (max-width: 700px) { #stage { height: auto } }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>◀ Void</button>
+  <span id="crumb">Till 01 · Home</span>
+  <span class="total" id="total">Printed 0</span>
+</header>
+<main><div id="stage"></div></main>
+<script src="kit2.js"></script>
+<script src="kit3.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 14, speed: 600, band: 90, life: 1700, push: 6, mousePush: 5,
+  render(ctx, dots) {
+    for (const d of dots) { ctx.fillStyle = d.e > .2 ? '#d2352b' : '#4a4d55'; ctx.globalAlpha = .45 + d.e * .55; const s = 1.6 + d.e * 2.2; ctx.fillRect(d.x - s / 2, d.y - s / 2, s, s) }
+    ctx.globalAlpha = 1
+  },
+})
+
+// Deterministic barcode from a string
+function barcode(str) {
+  let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  let x = 0, stops = []
+  while (x < 240) { const w = 1 + (h % 4); h = (h * 1103515245 + 12345) >>> 0; stops.push(`#1b1b1b ${x}px ${x + w}px`); x += w + 1 + (h % 3); h = (h * 1103515245 + 12345) >>> 0 }
+  return `<div class="code" style="background:linear-gradient(90deg,${stops.map(s => s + ',transparent 0').join(',').replace(/,transparent 0$/, '')}) left / 240px 100% no-repeat" aria-hidden="true"></div>`
+}
+
+let printed = 0
+const totalEl = document.getElementById('total')
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'rc' + (spec.go ? ' go' : '') + (spec.about ? ' about' : '')
+  el.innerHTML = spec.html + (spec.go ? '<span class="stamp">Open ▸</span>' : '')
+  if (spec.go) Kit.pressable(el, () => go(spec.go))
+  return el
+}
+const stage = Kit.Stage(document.getElementById('stage'), {
+  make,
+  layout: (k, W, H, ctx) => Kit.growLayout(k, W, H, { bento: ctx.home, cellH: 250, cellW: 330 }),
+  interval: 260,
+  // Prints top to bottom in line-sized steps while feeding down out of the slot
+  enter: el => el.animate([{ clipPath: 'inset(0 0 100% 0)', transform: 'translateY(-18px)' }, { clipPath: 'inset(0 0 0% 0)', transform: 'none' }], { duration: 460, easing: 'steps(12, end)' }),
+  exit: el => el.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(40px) rotate(-7deg)', opacity: 0 }], { duration: 200, easing: 'ease-in', fill: 'forwards' }),
+  onSpawn: el => { printed++; totalEl.textContent = 'Printed ' + printed; setTimeout(() => { const r = Kit.rectOf(el); field.ripple(r.left + r.width / 2, r.top, .9) }, 120) },
+})
+
+const no = n => '#' + String(n).padStart(4, '0')
+const home = () => SECTIONS.map((s, i) => s.id === 'about'
+  ? { go: 'about', about: true, html: `<div class="hd"><span>${no(5)}</span><span>/about</span></div><div class="center">*** customer copy ***</div><h1>${esc(PERSON.name)}</h1>
+      <p>${esc(PERSON.role)}</p><div class="cut"></div><p class="email">${esc(PERSON.email)}</p><div class="line"><span>Status</span><span></span><b>Open</b></div>
+      <div class="line"><span>Stack</span><span></span><b>${PERSON.skills.length} items</b></div><div class="center">thank you for visiting</div>${barcode(PERSON.name)}` }
+  : { go: s.id, html: `<div class="hd"><span>${no(i + 1)}</span><span>${s.path}</span></div><div class="cut"></div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p>
+      <div class="line"><span>Items</span><span></span><b>${ITEMS[s.id].length}</b></div>${barcode(s.id)}` })
+const section = id => ITEMS[id].map((it, i) => ({ html: `<div class="hd"><span>${no(i + 1)}</span><span>qty 1</span></div><div class="cut"></div><h2>${esc(it.title)}</h2>
+  <p>${esc(it.text)}</p><div class="line"><span>${esc(it.meta.split(' · ')[0])}</span><span></span><b>${esc(it.progress != null ? Math.round(it.progress * 100) + '%' : it.meta.split(' · ').slice(1).join(' · ') || '—')}</b></div>${barcode(it.title)}` }))
+
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+const go = Kit.runApp(stage, {
+  home, section,
+  onView: t => { backBtn.hidden = t === 'home'; crumb.textContent = 'Till 01 · ' + (t === 'home' ? 'Home' : t === 'about' ? 'About' : SECTION[t].title) },
+  afterSpawn: t => (t === 'home' ? document.querySelector('.rc.go') : backBtn).focus({ preventScroll: true }),
+})
+backBtn.addEventListener('click', () => go('home'))
+go('home')
+</script>
+</body>
+</html>

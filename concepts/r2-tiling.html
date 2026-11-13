@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tiling WM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: an i3-style tiling desktop. Each new window splits the last one in half; cd into an entry closes the tiles and spawns that entry's files */
+:root {
+  --bg: #0c0a07; --pane: #120f0a; --amber: #ffb547; --amber-dim: #a8742a; --amber-faint: rgba(255,181,71,.15);
+  --fg: #ffd9a0; --ok: #9be37a; --err: #ff7a5c;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--mono) }
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 20; background: repeating-linear-gradient(0deg, rgba(0,0,0,.2) 0 1px, transparent 1px 3px) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+.bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 14px; height: 44px; background: var(--bg); border-bottom: 1px solid var(--amber-faint);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font-size: 13px }
+.ws { display: flex; gap: 4px }
+.ws button { font: 700 12px var(--mono); background: none; color: var(--amber-dim); border: 1px solid var(--amber-faint); padding: 2px 8px; cursor: pointer }
+.ws button[aria-current="true"] { background: var(--amber); color: var(--bg); border-color: var(--amber) }
+.prompt { display: flex; align-items: center; flex: 1; min-width: 0; gap: 0 }
+.prompt label { color: var(--amber); white-space: nowrap } .prompt label b { color: var(--ok); font-weight: 500 }
+.prompt input { flex: 1; min-width: 60px; background: none; border: 0; color: var(--fg); font: inherit; outline: none; caret-color: var(--amber); padding-left: 8px }
+#msg { color: var(--amber-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40% }
+#msg.err { color: var(--err) }
+main { position: relative; padding: 12px max(12px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px)) }
+#desk { position: relative; height: calc(100vh - 44px - 24px) }
+.win { position: absolute; background: var(--pane); border: 1px solid var(--amber-dim); display: flex; flex-direction: column; overflow: hidden;
+  transition: left .28s cubic-bezier(.2,.9,.1,1), top .28s cubic-bezier(.2,.9,.1,1), width .28s cubic-bezier(.2,.9,.1,1), height .28s cubic-bezier(.2,.9,.1,1), border-color .15s, box-shadow .15s }
+.win:hover, .win:focus-visible, .win.active { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber), 0 0 30px rgba(255,181,71,.16); outline: none; z-index: 2 }
+.title { flex: none; display: flex; justify-content: space-between; gap: 10px; padding: 3px 10px; background: var(--amber-faint); color: var(--amber); font-size: 12px; white-space: nowrap }
+.win:hover .title, .win.active .title { background: var(--amber); color: var(--bg) }
+.x { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 0 }
+.body { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden }
+.cmd { color: var(--amber-dim) } .cmd::before { content: "$ "; color: var(--amber) }
+.win h2 { margin: 4px 0 0; font-size: clamp(18px, 2vw, 26px); line-height: 1.15; color: var(--amber); font-weight: 800; text-shadow: 0 0 14px rgba(255,181,71,.35) }
+.comment { color: var(--amber-dim) } .comment::before { content: "# " }
+.win.go { cursor: pointer }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 0 14px } .kv dt { color: var(--amber-dim) } .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere }
+.ok { color: var(--ok) }
+.meter { color: var(--ok); letter-spacing: -1px }
+@media (max-width: 700px) { #desk { height: auto } .ws { display: none } #msg { display: none } }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<div class="bar">
+  <div class="ws" id="ws"></div>
+  <form class="prompt" id="form" autocomplete="off">
+    <label for="cmd">aakash@portfolio:<b id="cwd">~</b>$</label>
+    <input id="cmd" spellcheck="false" placeholder="try: cd projects, cd .., help">
+  </form>
+  <span id="msg">click a window or type a command</span>
+</div>
+<main><div id="desk"></div></main>
+<script src="kit2.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const desk = document.getElementById('desk'), msg = document.getElementById('msg'), cwdEl = document.getElementById('cwd'), input = document.getElementById('cmd')
+const GLYPHS = ['·', '·', '+', '*', '#']
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 22, speed: 650, band: 70, life: 1600, push: 6, mousePush: 4,
+  render(ctx, dots) {
+    ctx.font = '13px "JetBrains Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffb547'
+    for (const d of dots) { ctx.globalAlpha = 0.08 + d.e * 0.75; ctx.fillText(GLYPHS[Math.min(4, (d.e * 5) | 0)], d.x, d.y) }
+    ctx.globalAlpha = 1
+  },
+})
+
+const GAP = 10
+const narrow = () => innerWidth <= 700
+// Dwindle layout: each window takes half of what is left, alternating split direction by the longer side
+function layout(n) {
+  if (narrow()) {
+    const W = desk.clientWidth, H = 190
+    desk.style.height = n * (H + GAP) + 'px'
+    return Array.from({ length: n }, (_, i) => ({ x: 0, y: i * (H + GAP), w: W, h: H }))
+  }
+  desk.style.height = ''
+  let r = { x: 0, y: 0, w: desk.clientWidth, h: desk.clientHeight }
+  const out = []
+  for (let i = 0; i < n; i++) {
+    if (i === n - 1) { out.push(r); break }
+    if (r.w >= r.h) {
+      const a = Math.round((r.w - GAP) * (i === 0 ? .46 : .5))
+      out.push({ x: r.x, y: r.y, w: a, h: r.h }); r = { x: r.x + a + GAP, y: r.y, w: r.w - a - GAP, h: r.h }
+    } else {
+      const a = Math.round((r.h - GAP) * .5)
+      out.push({ x: r.x, y: r.y, w: r.w, h: a }); r = { x: r.x, y: r.y + a + GAP, w: r.w, h: r.h - a - GAP }
+    }
+  }
+  return out
+}
+let wins = []
+const place = (el, r) => Object.assign(el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' })
+const relayout = () => { const R = layout(wins.length); wins.forEach((w, i) => place(w, R[i])) }
+addEventListener('resize', relayout)
+
+function makeWin(w) {
+  const el = document.createElement('section')
+  el.className = 'win' + (w.go ? ' go' : '')
+  el.innerHTML = `<div class="title"><span>${esc(w.file)}</span>${w.go ? '<span>[enter]</span>' : '<button class="x" type="button" aria-label="Close window">[x]</button>'}</div><div class="body">${w.body}</div>`
+  if (w.go) Kit.pressable(el, () => run('cd ' + w.go))
+  else {
+    el.tabIndex = 0
+    el.addEventListener('click', e => {
+      if (e.target.closest('.x')) return closeOne(el)
+      wins.forEach(x => x.classList.toggle('active', x === el))
+      const c = Kit.centerOf(el); field.ripple(c.x, c.y, .7)
+    })
+  }
+  return el
+}
+
+async function spawn(list) {
+  for (const w of list) {
+    const el = makeWin(w)
+    desk.append(el); wins.push(el); relayout()
+    if (!Kit.reduced) el.animate([
+      { clipPath: 'inset(50% 0 50% 0)', filter: 'brightness(3)' },
+      { clipPath: 'inset(0 0 0 0)', filter: 'brightness(1.5)', offset: .6 },
+      { clipPath: 'inset(0 0 0 0)', filter: 'brightness(1)' }], { duration: 300, easing: 'cubic-bezier(.2,.9,.1,1)' })
+    const r = Kit.rectOf(el); field.ripple(r.left + r.width / 2, r.top + r.height / 2, .8)
+    await Kit.wait(120)
+  }
+}
+async function closeOne(el) {
+  if (!Kit.reduced) await el.animate([{ clipPath: 'inset(0 0 0 0)', opacity: 1 }, { clipPath: 'inset(50% 0 50% 0)', opacity: .3 }], { duration: 130, fill: 'forwards' }).finished
+  el.remove(); wins = wins.filter(w => w !== el); relayout()
+}
+async function closeAll() { while (wins.length) { await closeOne(wins[wins.length - 1]); await Kit.wait(25) } }
+
+const homeWins = () => [
+  { file: 'whoami', go: 'about', body: `<div class="cmd">whoami</div><h2>${esc(PERSON.name)}</h2>
+    <dl class="kv"><dt>role</dt><dd>${esc(PERSON.role)}</dd><dt>email</dt><dd>${esc(PERSON.email)}</dd>
+    <dt>stack</dt><dd>${esc(PERSON.skills.join(' · '))}</dd><dt>status</dt><dd class="ok">● ${esc(PERSON.status)}</dd></dl>` },
+  ...SECTIONS.filter(s => s.id !== 'about').map(s => ({ file: s.path.slice(1) + '/', go: s.id,
+    body: `<div class="cmd">cd ${s.path.slice(1)}</div><h2>${esc(s.title)}</h2><div class="comment">${esc(s.kicker)} · ${ITEMS[s.id].length} files</div>` })),
+]
+const sectionWins = id => ITEMS[id].map(it => ({ file: it.file,
+  body: `<div class="cmd">cat ${esc(it.file)}</div><h2>${esc(it.title)}</h2><div class="comment">${esc(it.meta)}</div><div>${esc(it.text)}</div>` +
+    (it.progress != null ? `<div class="meter">[${'█'.repeat(Math.round(it.progress * 20))}${'░'.repeat(20 - Math.round(it.progress * 20))}] ${Math.round(it.progress * 100)}%</div>` : '') }))
+
+// Workspace buttons mirror i3's numbered workspaces
+const wsEl = document.getElementById('ws')
+const WS = [['~', 'home'], ...SECTIONS.map(s => [s.path.slice(1), s.id])]
+wsEl.innerHTML = WS.map(([label, id], i) => `<button type="button" data-id="${id}" title="${label}">${i}</button>`).join('')
+wsEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.id) })
+
+let cwd = null, busy = false
+async function go(id) {
+  if (busy || id === cwd) return
+  busy = true
+  await closeAll()
+  cwd = id
+  cwdEl.textContent = id === 'home' ? '~' : '~' + SECTION[id].path
+  wsEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-current', String(b.dataset.id === id)))
+  scrollTo(0, 0)
+  await spawn(id === 'home' ? homeWins() : sectionWins(id))
+  busy = false
+}
+
+function say(text, err) { msg.textContent = text; msg.classList.toggle('err', !!err) }
+function run(line) {
+  const [cmd, arg = ''] = line.trim().split(/\s+/)
+  const target = arg.replace(/^~?\/?/, '').replace(/\/$/, '')
+  if (cmd === 'cd') {
+    if (!target || target === '..' || target === '~') return go('home'), say('cd ..')
+    const s = SECTIONS.find(s => s.id === target || s.path.slice(1) === target)
+    if (s) return go(s.id), say('cd ' + s.path.slice(1))
+    return say(`cd: no such directory: ${arg}`, true)
+  }
+  if (cmd === 'ls') return say(cwd === 'home' ? SECTIONS.map(s => s.path.slice(1) + '/').join('  ') : ITEMS[cwd].map(i => i.file).join('  '))
+  if (cmd === 'help') return say('cd <dir> · cd .. · ls · esc goes back')
+  if (cmd) say(`command not found: ${cmd}`, true)
+}
+document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); run(input.value); input.value = '' })
+Kit.onBack(() => go('home'))
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.activeElement === input) { input.blur(); go('home') } })
+
+go('home')
+</script>
+</body>
+</html>

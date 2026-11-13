@@ -1,0 +1,118 @@
+// Site content, taken from Aakash's resumes (current Oct 2026 version, plus earlier versions for the AIAA CubeSat win and the research lab).
+// Every number below appears on one of those resumes.
+(function () {
+  const PERSON = {
+    name: 'Aakash Senthilnathan',
+    photo: 'avatar.jpg',
+    role: 'CS + Statistics & Data Science · UCSB ’28',
+    email: 'aakash.senthilnathan@gmail.com',
+    seeking: 'Seeking ML & SWE internships',
+    links: [
+      { label: 'LinkedIn', url: 'https://linkedin.com/in/aakashsenthilnathan' },
+      { label: 'GitHub', url: 'https://github.com/aakashksen' },
+    ],
+  }
+
+  // Home corners, in intro order: top-left, top-right, bottom-left, bottom-right. About lands in the middle.
+  const SECTIONS = [
+    { id: 'experience', title: 'Experience', kicker: 'AI infrastructure, data engineering, backend', path: '/experience' },
+    { id: 'projects', title: 'Projects', kicker: 'ML systems and things I have shipped', path: '/projects' },
+    { id: 'skills', title: 'Skills', kicker: 'ML · Backend · Infrastructure', path: '/skills' },
+    { id: 'hire', title: 'Open to internships', kicker: 'Machine learning & software engineering', path: '/hire' },
+    { id: 'about', title: PERSON.name, kicker: 'About me', path: '/about' },
+  ]
+
+  const ITEMS = {
+    experience: [
+      { title: 'UCSB ITS', role: 'AI & Data Science Infrastructure Developer Intern', dates: 'May 2026 – Present', now: true,
+        metric: ['26,000+', 'students served by the LLM platform I architected'],
+        points: ['Architected Hephaestus, a multi-tenant FastAPI/LiteLLM platform on Blackwell-hosted vLLM', 'Built the LLM eval pipeline: p95 latency, throughput, concurrency, GPU utilisation', 'Moving JupyterHub/BinderHub from GKE to bare-metal RKE2 Kubernetes'],
+        tags: ['FastAPI', 'LiteLLM', 'vLLM', 'Kubernetes', 'Helm', 'Jenkins'],
+        long: ['Architected Hephaestus, a multi-tenant FastAPI/LiteLLM platform for UCSB’s 26,000+ students, deployed in a Harvester-managed Linux (Ubuntu) environment and connecting an OpenAI-compatible API to Blackwell-hosted vLLM inference, with student API-key provisioning, model access policies, usage quotas and usage monitoring.',
+          'Built an LLM evaluation and deployment pipeline that compares new models on coding and research tasks, tests vLLM serving performance (p95 latency, token throughput, concurrency, GPU utilisation) and updates UCSB’s student-facing model lineup with stronger models that fit Blackwell GPU capacity.',
+          'Contributed to the JupyterHub/BinderHub migration from GKE to a bare-metal RKE2 Kubernetes cluster, configuring Helm deployments and Jenkins CI/CD for parallel ARM64/AMD64 container builds and delivery.'] },
+      { title: 'Data Science UCSB', role: 'Vice President', dates: 'Oct 2024 – Present', now: true,
+        metric: ['600+', 'participants at the Datathon I ran'],
+        points: ['Lead operations and programming for 500+ members', 'Managed a $20K+ budget and grew it 45% year over year', 'Brought in sponsors including PyTorch and Groq'],
+        tags: ['Leadership', 'Partnerships', 'Events'],
+        long: ['Direct day-to-day operations and programming for Data Science UCSB’s 500+ members, leading the officer team behind weekly technical seminars, career fairs, a student project showcase and the flagship Datathon, while building relationships with industry teams including Google Quantum, Amazon, PyTorch and Groq.',
+          'As External Vice President, directed financial strategy and managed a $20,000+ budget, driving 45% year-over-year growth in the operating budget.',
+          'Orchestrated the 600+ participant Datathon from conception to execution, securing funding from PyTorch and Groq, managing relations with Google, Oracle and Anthropic, and overseeing 50+ final project submissions.'] },
+      { title: 'Kaiser Permanente', role: 'Data & AI Engineering Intern', dates: 'Jun – Aug 2026',
+        metric: ['2 weeks → 3 hrs', 'dashboard migrations, with an MCP agent I built'],
+        points: ['ETL reconciling 600+ Epic Clarity and HR tables into DuckDB models', 'LLM finance chatbot on a FastAPI semantic query engine', 'Agentic Tableau → Power BI migration with ~80% fewer LLM tokens'],
+        tags: ['Python', 'Polars', 'DuckDB', 'FastAPI', 'Pydantic', 'MCP'],
+        long: ['Engineered a scheduled Python ETL pipeline with Polars and Pandas, reconciling 600+ Epic Clarity (Oracle) and HR source tables through canonical cost-center mappings and replacing duplicated DAX/Power Query transformations with validated DuckDB models spanning 8+ years and 90+ departments at a medical center reporting $500M+ in annual net patient revenue.',
+          'Built an LLM-powered finance chatbot backed by a FastAPI semantic query engine, using Pydantic schemas to validate model-generated JSON and apply predefined metrics, joins and column rules before compiling requests to SQL.',
+          'Developed an agentic workflow with MCP servers and a custom Python library to parse Tableau workbooks and generate PBIP projects with PBIR report definitions, TMDL semantic models, DAX measures and Deneb/Vega-Lite visuals, cutting dashboard migration from two weeks to 2–3 hours and LLM token use by approximately 80%.'] },
+      { title: 'Spatial Pattern Analysis & Research Lab', role: 'Undergraduate Research Assistant · UCSB', dates: 'From May 2025',
+        metric: ['+5–6% IoU', 'for context-aware vs generalised models, shown by my meta-analysis'],
+        points: ['Meta-analysis across 150+ peer-reviewed papers and multiple geographies', 'PostgreSQL research database that removed 100+ hours of manual work'],
+        tags: ['Research', 'Geospatial ML', 'PostgreSQL', 'Meta-analysis'],
+        long: ['Established the foundational principle for a new ground-up model development initiative by proving through meta-analysis that context-aware models achieve a 5–6% IoU uplift over generalised approaches in diverse geographies (e.g. India, China, Africa).',
+          'Eliminated 100+ hours of manual research labour by engineering a relational database in PostgreSQL that automated the ingestion, standardisation and analysis of findings from 150+ peer-reviewed papers.'] },
+      { title: 'HopeKCC', role: 'Software Engineer Intern (Backend)', dates: 'Jun – Aug 2025',
+        metric: ['−86%', 'mean API latency, 720ms → 96ms'],
+        points: ['Rebuilt the REST API on FastAPI + PostgreSQL on GCP', 'CI/CD from scratch with GitHub Actions, saving 250+ eng hours a year', 'Async job queue handling 1,500+ concurrent requests'],
+        tags: ['FastAPI', 'PostgreSQL', 'GCP', 'GitHub Actions'],
+        long: ['Architected an end-to-end overhaul of the platform’s RESTful endpoints using FastAPI on GCP, migrating the data persistence layer to a production-grade PostgreSQL instance and cutting mean API latency by 86% (from 720ms to 96ms).',
+          'Took full ownership of a CI/CD pipeline built from scratch with GitHub Actions to automate unit testing and zero-downtime deployments, cutting manual release processes by 75% and saving 250+ engineering hours annually.',
+          'Developed a backend service to automate the platform’s ChordPro to PDF/PNG conversion workflow, implementing a job queueing system in PostgreSQL with asynchronous batch processing and error logging to manage 1,500+ concurrent requests.'] },
+    ],
+    projects: [
+      { title: 'Hephaestus', role: 'Multi-tenant LLM platform · built at UCSB ITS', dates: '2026 · in production', now: true,
+        metric: ['26,000+', 'students with API access to campus-hosted models'],
+        points: ['OpenAI-compatible API in front of vLLM on Blackwell GPUs', 'API keys, model access policies, quotas and usage monitoring', 'Model lineup chosen by my own eval pipeline'],
+        tags: ['FastAPI', 'LiteLLM', 'vLLM', 'Kubernetes'],
+        long: ['Hephaestus gives every UCSB student programmatic access to large language models hosted on campus. It is a multi-tenant FastAPI/LiteLLM service in a Harvester-managed Ubuntu environment, exposing an OpenAI-compatible API in front of vLLM inference on Blackwell GPUs.',
+          'Handles student API-key provisioning, per-model access policies, usage quotas and usage monitoring.',
+          'Paired with an evaluation pipeline that benchmarks candidate models on coding and research tasks and on serving performance (p95 latency, token throughput, concurrency, GPU utilisation) before they reach students.'] },
+      { title: 'SPROUT', role: 'Plant-disease detection + RAG care assistant', dates: 'Oct 2024 – May 2025',
+        metric: ['98.5%', 'validation accuracy across 38 plant diseases'],
+        points: ['CNN trained in PyTorch on 110,000+ images', 'RAG chatbot (DeepSeek + ChromaDB): care plans 80% more accurate than a base LLM', 'Dockerised and deployed to Google Cloud'],
+        tags: ['PyTorch', 'CNN', 'RAG', 'ChromaDB', 'Docker', 'GCP'],
+        long: ['Trained and optimised a convolutional neural network in PyTorch for plant-disease identification, achieving 98.5% validation accuracy across 38 disease categories on a dataset of 110,000+ images.',
+          'Implemented a retrieval-augmented generation chatbot using the DeepSeek API and a ChromaDB vector database to enrich prompts with relevant plant-care context, improving care-plan accuracy by 80% over base LLM responses.',
+          'Containerised the full-stack application with Docker and deployed the ML pipeline to Google Cloud, eliminating environment-related errors and saving the team 10+ hours of manual deployment a week.'] },
+      { title: 'ContextLens', role: 'Real-time multimodal conversation assistant', dates: 'Jan 2026',
+        metric: ['3 AI streams', 'speech, vision and reasoning fused live in AR'],
+        points: ['Deepgram + Gemini Vision + Gemini reasoning in one pipeline', 'Sliding-window transcript engine with context compression', 'Fault-tolerant fusion layer for late or missing modalities'],
+        tags: ['Gemini', 'Deepgram', 'Unity AR', 'NLP'],
+        long: ['Built to support introverted and neurodivergent users: a real-time multimodal inference pipeline combining Deepgram transcription, Gemini Vision and Gemini reasoning to deliver contextual guidance inside a Unity AR interface.',
+          'Implemented a sliding-window transcript engine with stateful context compression, using structured prompt templates and Gemini-based summarisation to sustain coherent low-latency inference across multi-turn dialogue.',
+          'Engineered a fault-tolerant multimodal fusion layer that processes concurrent asynchronous speech and vision streams, normalising them into a unified JSON schema with graceful degradation for delayed or missing modalities.'] },
+      { title: 'CubeSat Challenge', role: 'AIAA × MIT Beaver Works (BWSI)', dates: 'Oct 2021 – May 2022',
+        metric: ['1st place', 'national Build a CubeSat Challenge'],
+        points: ['Satellite built for 30% less than pre-built kits', 'OpenCV model spots ocean plastic at a 65% higher rate than baseline'],
+        tags: ['Python', 'OpenCV', 'NumPy', 'Raspberry Pi'],
+        long: ['Won first place in the AIAA and MIT Beaver Works Summer Institute Build a CubeSat national challenge.',
+          'Engineered a cost-effective CubeSat with a 30% cost reduction using a custom acrylic and metal chassis, a Raspberry Pi and a calibration system.',
+          'Created a Python computer-vision program using OpenCV and NumPy that isolates ocean plastics from satellite imagery using HSV segmentation, achieving a 65% higher detection rate than baseline models.'] },
+    ],
+    about: [
+      { title: 'Hi, I’m Aakash', role: 'Bio', dates: 'Santa Barbara, CA',
+        metric: ['2 majors', 'Computer Science + Statistics & Data Science'],
+        points: ['I build the systems underneath AI: LLM platforms, data pipelines and fast APIs', 'Right now: AI infrastructure at UCSB ITS and VP of Data Science UCSB'],
+        tags: ['ML engineering', 'Backend', 'Infrastructure'],
+        long: ['I’m a double major in Computer Science and Statistics & Data Science at UC Santa Barbara, graduating in June 2028. I like building the systems underneath AI: serving models to thousands of users, wiring up data pipelines, and making APIs fast.',
+          'I’m currently an AI & Data Science Infrastructure Developer Intern at UCSB ITS and Vice President of Data Science UCSB, and I’m looking for machine learning and software engineering internships.'] },
+      { title: 'Education', role: 'University of California, Santa Barbara', dates: 'Expected June 2028',
+        metric: ['3.69', 'GPA'],
+        points: ['B.S. Computer Science + B.S. Statistics & Data Science', 'Coursework: AI, Statistical ML, Optimization for ML, Data Structures & Algorithms, Computer Networks, Regression'],
+        tags: ['Computer Science', 'Statistics', 'Data Science'],
+        long: ['Double major: B.S. Computer Science and B.S. Statistics & Data Science. Expected graduation June 2028. GPA 3.69.',
+          'Relevant coursework: Data Structures & Algorithms, Linear Algebra, Artificial Intelligence, Computer Networks, Regression Analysis, Statistical Machine Learning, Optimization for Machine Learning.'] },
+      { title: 'Contact', role: 'Email, LinkedIn, GitHub', dates: 'Get in touch', contact: true,
+        metric: ['Say hi', PERSON.email], points: [], tags: [] },
+    ],
+  }
+
+  const SKILLS = [
+    { group: 'Machine learning & AI', items: ['PyTorch', 'TensorFlow', 'scikit-learn', 'LangChain', 'LangGraph', 'OpenCV', 'LLMs', 'RAG', 'vLLM', 'Agentic AI', 'NLP'] },
+    { group: 'Software engineering', items: ['Python', 'Java', 'C++', 'JavaScript', 'SQL', 'R', 'FastAPI', 'Flask', 'React', 'Node.js', 'Express', 'REST API design'] },
+    { group: 'Data & infrastructure', items: ['Docker', 'Kubernetes', 'Helm', 'PostgreSQL', 'MongoDB', 'ChromaDB', 'GCP', 'AWS', 'Azure', 'Jenkins', 'GitHub Actions', 'ETL pipelines'] },
+    { group: 'Certifications', items: ['Microsoft Azure AI Fundamentals (AI-900)', 'IBM AI Engineering (in progress)'] },
+  ]
+
+  Object.assign(window.Kit, { PERSON, SECTIONS, SECTION: Object.fromEntries(SECTIONS.map(s => [s.id, s])), ITEMS, SKILLS })
+})()

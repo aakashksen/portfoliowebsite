@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gravity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Fragment+Mono&display=swap">
+<style>
+/* Layout: a physics pit under a slim nav bar. Blocks fall and pile up and can be thrown; opening an entry drops the floor and rains in that entry's blocks */
+:root {
+  --concrete: #dcd8d0; --ink: #151515; --paper: #f7f5f0; --orange: #ff5a1f; --mute: #6f6a62; --line: #c4bfb5;
+  --display: "Bricolage Grotesque", system-ui, sans-serif; --mono: "Fragment Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; height: 100%; background: var(--concrete); color: var(--ink); font: 15px/1.45 var(--display) }
+body { overflow: hidden; background-image: radial-gradient(rgba(0,0,0,.09) 1px, transparent 1.2px); background-size: 20px 20px }
+nav { position: fixed; z-index: 3; inset: 0 0 auto; height: 56px; display: flex; align-items: center; gap: 10px; background: var(--concrete); border-bottom: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); overflow-x: auto }
+nav .me { font-weight: 800; font-size: 16px; white-space: nowrap; margin-right: auto }
+nav button { font: 400 12px var(--mono); color: var(--ink); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer; white-space: nowrap }
+nav button:hover, nav button[aria-current="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink) }
+nav button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px }
+nav .back { background: var(--orange); color: var(--paper); border-color: var(--orange) }
+nav .back[hidden] { display: none }
+#pit { position: fixed; inset: 56px 0 0 0; touch-action: none; cursor: grab; overflow: hidden }
+#pit:active { cursor: grabbing }
+.hint { position: fixed; z-index: 2; left: 50%; translate: -50% 0; top: 72px; font: 12px var(--mono); color: var(--mute); pointer-events: none; white-space: nowrap }
+.b { position: absolute; left: 0; top: 0; border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; pointer-events: none; user-select: none;
+  background: var(--paper); color: var(--ink); border: 2px solid var(--ink); will-change: transform }
+.b.dark { background: var(--ink); color: var(--paper) }
+.b.hot { background: var(--orange); color: var(--paper); border-color: var(--orange) }
+.b .m { font: 12px var(--mono); opacity: .75; display: flex; justify-content: space-between; gap: 10px }
+.b h2 { margin: 0; font-weight: 800; font-size: 30px; line-height: .95; letter-spacing: -.02em }
+.b p { margin: 4px 0 0; font-size: 14px }
+.b h1 { margin: 0; font-weight: 800; font-size: 40px; line-height: .9; letter-spacing: -.03em }
+.b .email { font: 13px var(--mono); overflow-wrap: anywhere }
+.b .big { font-size: 64px; font-weight: 800; letter-spacing: -.04em; line-height: .85 }
+.bar { height: 6px; border-radius: 6px; background: rgba(0,0,0,.12); margin-top: 8px } .bar span { display: block; height: 100%; border-radius: 6px; background: var(--orange) }
+/* Reduced motion: no physics, a plain grid */
+#pit.static { position: static; padding: 72px 16px 16px; display: flex; flex-wrap: wrap; gap: 12px; overflow: visible; cursor: default; touch-action: auto }
+#pit.static .b { position: static; transform: none !important; pointer-events: auto; cursor: pointer }
+body.static-body { overflow: auto }
+@media (max-width: 600px) { .b h2 { font-size: 24px } .b h1 { font-size: 30px } .b .big { font-size: 44px } .hint { display: none } }
+</style>
+</head>
+<body>
+<nav aria-label="Sections">
+  <span class="me" id="me"></span>
+  <button class="back" id="back" type="button" hidden>← Back</button>
+  <span id="links" style="display:contents"></span>
+</nav>
+<span class="hint">drag and throw the blocks · click one to open it</span>
+<div id="pit"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script src="kit2.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const { Engine, Runner, Bodies, Body, Composite, Mouse, MouseConstraint, Query, Events } = Matter
+const pit = document.getElementById('pit'), backBtn = document.getElementById('back')
+document.getElementById('me').textContent = PERSON.name
+const links = document.getElementById('links')
+links.innerHTML = SECTIONS.map(s => `<button type="button" data-id="${s.id}">${s.id === 'about' ? 'About' : esc(s.title)}</button>`).join('')
+links.addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.id) })
+backBtn.addEventListener('click', () => go('home'))
+Kit.onBack(() => go('home'))
+
+const W = () => pit.clientWidth, H = () => pit.clientHeight
+const bw = () => Math.min(300, W() * .72)
+
+function homeBlocks() {
+  return SECTIONS.map((s, i) => s.id === 'about'
+    ? { id: 'about', cls: 'hot', w: Math.min(340, W() * .8), html: `<span class="m"><span>/about</span><span>● ${esc(PERSON.status)}</span></span><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)}</p><span class="email">${esc(PERSON.email)}</span>` }
+    : { id: s.id, cls: i % 2 ? 'dark' : '', w: bw(), html: `<span class="m"><span>${s.path}</span><span>${ITEMS[s.id].length} blocks ↘</span></span><div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` })
+}
+function sectionBlocks(id) {
+  return [{ cls: 'dark', w: bw(), html: `<span class="m"><span>${SECTION[id].path}</span><span>sample</span></span><span class="big">${esc(id === 'about' ? 'About' : SECTION[id].title)}</span>` },
+    ...ITEMS[id].map((it, i) => ({ cls: i === 0 ? 'hot' : '', w: bw(), html: `<span class="m"><span>${esc(it.meta)}</span></span><div><h2>${esc(it.title)}</h2><p>${esc(it.text)}</p>${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>` }))]
+}
+
+let view = null, busy = false
+function setNav(target) {
+  backBtn.hidden = target === 'home'
+  links.querySelectorAll('button').forEach(b => b.setAttribute('aria-current', String(b.dataset.id === target)))
+}
+
+if (Kit.reduced) {
+  // Static fallback
+  pit.classList.add('static'); document.body.classList.add('static-body')
+  window.go = target => {
+    view = target; setNav(target)
+    const list = target === 'home' ? homeBlocks() : sectionBlocks(target)
+    pit.innerHTML = list.map(b => `<article class="b ${b.cls}" style="width:${b.w}px" ${b.id ? `data-go="${b.id}"` : ''}>${b.html}</article>`).join('')
+    pit.querySelectorAll('[data-go]').forEach(el => Kit.pressable(el, () => go(el.dataset.go)))
+  }
+  go('home')
+} else {
+  const engine = Engine.create({ enableSleeping: true })
+  engine.gravity.y = 1.1
+  const runner = Runner.create()
+  Runner.run(runner, engine)
+  let walls = [], floor = null, blocks = []
+  function makeWalls() {
+    Composite.remove(engine.world, walls)
+    const w = W(), h = H(), t = 200
+    floor = Bodies.rectangle(w / 2, h + t / 2, w * 3, t, { isStatic: true })
+    walls = [floor, Bodies.rectangle(-t / 2, h / 2 - 2000, t, h * 2 + 4000, { isStatic: true }), Bodies.rectangle(w + t / 2, h / 2 - 2000, t, h * 2 + 4000, { isStatic: true })]
+    Composite.add(engine.world, walls)
+  }
+  makeWalls()
+  let rt
+  addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(makeWalls, 150) })
+
+  // Mouse dragging and throwing
+  const mouse = Mouse.create(pit)
+  mouse.element.removeEventListener('wheel', mouse.mousewheel)
+  mouse.element.removeEventListener('mousewheel', mouse.mousewheel)
+  mouse.element.removeEventListener('DOMMouseScroll', mouse.mousewheel)
+  Composite.add(engine.world, MouseConstraint.create(engine, { mouse, constraint: { stiffness: .2, damping: .1 } }))
+
+  // A press that barely moves counts as a click on whatever block is under it
+  let press = null
+  pit.addEventListener('pointerdown', e => { press = { x: e.clientX, y: e.clientY, t: performance.now() } })
+  pit.addEventListener('pointerup', e => {
+    if (!press || Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6 || performance.now() - press.t > 350) return
+    const r = pit.getBoundingClientRect()
+    const hit = Query.point(blocks.map(b => b.body), { x: e.clientX - r.left, y: e.clientY - r.top })[0]
+    const b = hit && blocks.find(b => b.body === hit)
+    if (b && b.id) go(b.id)
+    else if (hit) Body.setVelocity(hit, { x: (Math.random() - .5) * 8, y: -14 })
+  })
+
+  // Self-righting: blocks wobble back upright so their text stays readable (unless being dragged)
+  Events.on(engine, 'beforeUpdate', () => {
+    for (const b of blocks) {
+      if (b.body.isSleeping) continue
+      const a = Math.atan2(Math.sin(b.body.angle), Math.cos(b.body.angle))
+      Body.setAngularVelocity(b.body, b.body.angularVelocity * .96 - a * .012)
+    }
+  })
+  Events.on(engine, 'afterUpdate', () => {
+    for (const b of blocks) b.el.style.transform = `translate(${b.body.position.x - b.w / 2}px,${b.body.position.y - b.h / 2}px) rotate(${b.body.angle}rad)`
+  })
+
+  async function rain(list) {
+    for (let i = 0; i < list.length; i++) {
+      const spec = list[i]
+      const el = document.createElement('article')
+      el.className = 'b ' + spec.cls
+      el.style.width = spec.w + 'px'
+      el.innerHTML = spec.html
+      pit.append(el)
+      const w = el.offsetWidth, h = el.offsetHeight
+      const x = Math.max(w / 2 + 10, Math.min(W() - w / 2 - 10, W() / 2 + (Math.random() - .5) * W() * .55))
+      const body = Bodies.rectangle(x, -h, w, h, { chamfer: { radius: 14 }, restitution: .2, friction: .7, frictionAir: .012, angle: (Math.random() - .5) * .5 })
+      Body.setVelocity(body, { x: 0, y: 6 })
+      Composite.add(engine.world, body)
+      blocks.push({ el, body, w, h, id: spec.id })
+      await Kit.wait(130)
+    }
+  }
+  async function dropFloor() {
+    Composite.remove(engine.world, floor)
+    blocks.forEach(b => { Body.setStatic(b.body, false); b.body.isSleeping && Matter.Sleeping.set(b.body, false); Body.setVelocity(b.body, { x: (Math.random() - .5) * 4, y: 2 }) })
+    const t0 = performance.now()
+    while (blocks.some(b => b.body.position.y - b.h < H() + 40) && performance.now() - t0 < 1400) await Kit.wait(60)
+    blocks.forEach(b => { Composite.remove(engine.world, b.body); b.el.remove() })
+    blocks = []
+    Composite.add(engine.world, floor)
+  }
+
+  window.go = async target => {
+    if (busy || target === view) return
+    busy = true
+    if (view) await dropFloor()
+    view = target; setNav(target)
+    await rain(target === 'home' ? homeBlocks() : sectionBlocks(target))
+    busy = false
+  }
+  go('home')
+}
+</script>
+</body>
+</html>

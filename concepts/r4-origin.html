@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Origin v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: glass bento on a dot field. Intro is two beats (a square of four, then About pushes in the middle);
+   sections burst out of the clicked card; Current Work and every entry zoom into a long version */
+:root {
+  --bg: #050507; --glass: rgba(255,255,255,.055); --glass-hi: rgba(255,255,255,.09); --panel: #0c0d12;
+  --line: rgba(255,255,255,.12); --line-hi: rgba(255,255,255,.3);
+  --fg: #f2f3f7; --muted: #9597a6; --accent: #8fb0ff; --ok: #5be39a; --warn: #ffc56b;
+  --sans: "Geist", ui-sans-serif, system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+  --spring: cubic-bezier(.2,1.2,.35,1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+header { position: relative; z-index: 3; display: flex; align-items: center; gap: 14px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.crumb { font: 500 13px var(--mono); color: var(--muted) } .crumb b { color: var(--fg); font-weight: 500 }
+.back { font: 500 13px var(--mono); color: var(--fg); background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer }
+.back[hidden] { display: none }
+.back:hover { background: rgba(255,255,255,.12) }
+.back:focus-visible, .card:focus-visible, .x:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }
+main { position: relative; padding-block: 8px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#stage { position: relative; height: calc(100vh - 64px - 48px); transition: opacity .3s, filter .3s, scale .3s }
+#stage.dim { opacity: .25; filter: blur(2px); scale: .985 }
+.card { position: absolute; background: var(--glass); border: 1px solid var(--line); border-radius: 22px; padding: 22px 24px; overflow: hidden;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); display: flex; flex-direction: column; justify-content: space-between; gap: 16px; cursor: pointer;
+  transition: left .5s var(--spring), top .5s var(--spring), width .5s var(--spring), height .5s var(--spring), border-color .2s, background .2s }
+.card:hover { border-color: var(--line-hi); background: var(--glass-hi) }
+.path { font: 500 12px/1 var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 12px }
+.card:hover .arrow { color: var(--fg) }
+.zoomy .arrow { color: var(--warn) }
+h2 { margin: 0 0 6px; font-size: clamp(20px, 2.2vw, 28px); font-weight: 600; letter-spacing: -.02em; text-wrap: balance }
+.card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5 }
+.about { justify-content: center; align-items: center; text-align: center; gap: 14px }
+.avatar { width: 80px; height: 80px; border-radius: 50%; display: grid; place-items: center; font: 600 26px var(--sans); background: radial-gradient(circle at 30% 25%, #c9d6ff, #4a5bd8 70%); color: #0b0d1a; flex: none }
+.about h1 { margin: 0; font-size: clamp(24px, 2.4vw, 30px); font-weight: 650; letter-spacing: -.025em; text-wrap: balance }
+.email { font: 500 13px var(--mono); color: var(--accent); user-select: all; overflow-wrap: anywhere }
+.status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); flex: none }
+.meta { font: 500 12px var(--mono); color: var(--accent) }
+.bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 10px }
+.bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--ok)) }
+.mini { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--muted) }
+.mini div { display: flex; justify-content: space-between; gap: 10px }
+.mini b { color: var(--fg); font-weight: 500 }
+/* Zoom module */
+.zoom { position: fixed; z-index: 10; background: var(--panel); border: 1px solid var(--line-hi); border-radius: 26px; overflow: hidden; transform-origin: 0 0; box-shadow: 0 40px 120px -30px rgba(0,0,0,.9) }
+.zoom .short { position: absolute; inset: 0; padding: 22px 24px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none }
+.zoom .long { position: absolute; inset: 0; overflow-y: auto; padding: 28px clamp(20px, 4vw, 48px) 40px }
+.x { position: absolute; z-index: 2; top: 16px; right: 16px; font: 500 12px var(--mono); color: var(--fg); background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer }
+.long .kick { font: 500 12px var(--mono); color: var(--accent); text-transform: uppercase; letter-spacing: .08em }
+.long h3 { margin: 8px 0 6px; font-size: clamp(32px, 4.4vw, 56px); font-weight: 650; letter-spacing: -.035em; line-height: 1 }
+.long .lede { color: var(--muted); font-size: 17px; max-width: 62ch; margin: 0 0 28px; line-height: 1.55 }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px }
+.box { border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; background: rgba(255,255,255,.03); display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.box h4 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em }
+.box p, .box li { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0 }
+.box ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px }
+.row { display: flex; justify-content: space-between; gap: 12px; font: 500 12px var(--mono); color: var(--muted) }
+.row .pct { color: var(--ok) }
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--mono); padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--fg) }
+.pill.warn { color: var(--warn); border-color: rgba(255,197,107,.35) }
+.pill.ok { color: var(--ok); border-color: rgba(91,227,154,.35) }
+.log { display: flex; flex-direction: column; gap: 8px; margin-top: 4px }
+.log div { display: grid; grid-template-columns: 70px 1fr; gap: 10px; font-size: 13px; color: var(--muted) }
+.log time { font: 500 12px var(--mono); color: var(--fg) }
+.section-title { font: 500 12px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 28px 0 12px }
+.note { font: 12px var(--mono); color: var(--muted); margin-top: 28px }
+@media (max-width: 700px) { #stage { height: auto } }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>← Back</button>
+  <span class="crumb" id="crumb"><b>~</b></span>
+</header>
+<main><div id="stage"></div></main>
+<script src="kit2.js"></script>
+<script src="kit3.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+
+// Long-form content for the zoomed views (sample, to be replaced)
+const NOW = {
+  lede: 'A live view of what is on my desk. Each project shows where it stands, what moved this week and what comes next.',
+  log: [['Oct 21', 'Shipped the two-beat intro and the zoom module for this site.'], ['Oct 18', 'Moved the dot field to an idle-aware render loop.'], ['Oct 14', 'Started a WebGL port of the ripple shader.']],
+  details: {
+    'Portfolio v2': { status: 'Building', next: 'Port the chosen concept into Next.js', notes: ['Two-beat intro, burst transitions', 'Zoom module for long-form content', 'Real content pass still to do'] },
+    'Learning WebGL': { status: 'Learning', next: 'Render the dot grid as instanced points', notes: ['Finished buffers and attributes', 'Reading about framebuffer ping-pong'] },
+    'Side project': { status: 'Planning', next: 'Pick the idea and write a one-page spec', notes: ['Placeholder: describe the next thing you build'] },
+  },
+}
+const longFor = it => ({
+  lede: it.text + ' This is the long version: a short write-up, what I did, and what I learned. Replace it with the real story.',
+  bullets: ['What the problem was and who it was for', 'What I built and the interesting technical decisions', 'Results, numbers or feedback'],
+})
+
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 16, speed: 700, band: 90, life: 1400, push: 10,
+  render(ctx, dots) {
+    ctx.fillStyle = '#ffffff'
+    for (const d of dots) { const s = 1.2 + d.e * 1.4; ctx.globalAlpha = 0.13 + d.e * 0.6; ctx.fillRect(d.x - s / 2, d.y - s / 2, s, s) }
+    ctx.globalAlpha = 1
+  },
+})
+const softRipple = (x, y, s = .6) => field.ripple(x, y, s)
+
+// ---------- Stage: absolutely positioned cards that glide between layouts ----------
+const stageEl = document.getElementById('stage')
+let cards = [], view = null, busy = false
+const viewH = () => stageEl.clientHeight
+const layout = (k, home) => Kit.growLayout(k, stageEl.clientWidth, viewH(), { bento: home, cellH: 260, cellW: 340 })
+function place(el, r, instant) {
+  if (instant) el.style.transition = 'none'
+  Object.assign(el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' })
+  if (instant) { el.offsetWidth; el.style.transition = '' }
+}
+function relayout(home, instant) {
+  const R = layout(cards.length, home)
+  cards.forEach((c, i) => place(c, R[i], instant))
+  stageEl.style.minHeight = Math.max(...R.map(r => r.y + r.h)) + 'px'
+}
+addEventListener('resize', () => relayout(view === 'home', true))
+
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'card' + (spec.about ? ' about' : '') + (spec.zoom ? ' zoomy' : '')
+  el.innerHTML = spec.html
+  el.spec = spec
+  Kit.pressable(el, () => spec.zoom ? openZoom(el) : go(spec.go, el))
+  return el
+}
+// Adds a group of cards at once: everyone re-lays out, newcomers pop out of point P with a short stagger
+async function addGroup(specs, home, P, stagger = 45) {
+  const fresh = specs.map(make)
+  fresh.forEach(el => stageEl.append(el))
+  cards.push(...fresh)
+  const R = layout(cards.length, home)
+  cards.forEach((c, i) => place(c, R[i], fresh.includes(c)))
+  stageEl.style.minHeight = Math.max(...R.map(r => r.y + r.h)) + 'px'
+  if (Kit.reduced) return
+  await Promise.all(fresh.map((el, i) => {
+    const r = el.getBoundingClientRect()
+    const dx = P.x - (r.left + r.width / 2), dy = P.y - (r.top + r.height / 2)
+    return el.animate([{ transform: `translate(${dx}px,${dy}px) scale(.25)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
+      { duration: 520, delay: i * stagger, easing: 'cubic-bezier(.2,1.15,.35,1)', fill: 'backwards' }).finished
+  }))
+}
+// Everything collapses into point P together
+async function clearAll(P) {
+  const old = cards; cards = []
+  if (!Kit.reduced) await Promise.all(old.map((el, i) => {
+    const r = el.getBoundingClientRect()
+    return el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${P.x - (r.left + r.width / 2)}px,${P.y - (r.top + r.height / 2)}px) scale(.25)`, opacity: 0 }],
+      { duration: 260, delay: i * 15, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).finished
+  }))
+  old.forEach(el => el.remove())
+}
+
+// ---------- Content ----------
+const homeCard = s => s.id === 'about'
+  ? { go: 'about', about: true, html: `<div class="avatar">${PERSON.initials}</div><div><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)}</p></div>
+      <span class="email">${esc(PERSON.email)}</span><span class="status"><span class="dot"></span>${esc(PERSON.status)}</span>` }
+  : s.id === 'current'
+  ? { zoom: 'current', html: `<div class="path"><span>${s.path}</span><span class="arrow">⤢ zoom</span></div>
+      <div class="mini">${ITEMS.current.slice(0, 2).map(it => `<div><b>${esc(it.title)}</b><span>${Math.round(it.progress * 100)}%</span></div>`).join('')}</div>
+      <div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` }
+  : { go: s.id, html: `<div class="path"><span>${s.path}</span><span class="arrow">↗ ${ITEMS[s.id].length}</span></div><div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` }
+const itemCard = it => ({ zoom: 'item', item: it, html: `<div class="path"><span class="meta">${esc(it.meta)}</span><span class="arrow">⤢</span></div>
+  <div><h2>${esc(it.title)}</h2><p${it.title === 'Contact' ? ' class="email"' : ''}>${esc(it.text)}</p>${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>` })
+const byId = id => SECTIONS.find(s => s.id === id)
+const CORNERS = ['projects', 'experience', 'blog', 'current']
+
+// ---------- Navigation ----------
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+function chrome() {
+  const z = zoomState
+  backBtn.hidden = view === 'home' && !z
+  const where = view === 'home' ? '' : ` / <b>${esc(view === 'about' ? 'about' : SECTION[view].path.slice(1))}</b>`
+  crumb.innerHTML = `<b>~</b>${where}${z ? ` / <b>${esc(z.title)}</b>` : ''}`
+}
+const centerOfStage = () => { const r = stageEl.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + Math.min(r.height, innerHeight - r.top) / 2 } }
+
+async function intro() {
+  busy = true; view = 'home'; chrome()
+  const P = centerOfStage()
+  // Beat 1: four corners appear together as a square
+  softRipple(P.x, P.y, .7)
+  await addGroup(CORNERS.map(id => homeCard(byId(id))), false, P, 40)
+  // Beat 2: About spawns in the middle and pushes the square apart into the bento
+  softRipple(P.x, P.y, .9)
+  await addGroup([homeCard(byId('about'))], true, P)
+  busy = false
+}
+async function go(target, fromEl) {
+  if (busy || target === view) return
+  busy = true
+  const P = fromEl ? Kit.centerOf(fromEl) : centerOfStage()
+  softRipple(P.x, P.y, .5)
+  await clearAll(P)
+  view = target; chrome(); scrollTo(0, 0)
+  if (target === 'home') {
+    // Straight back to the bento, all at once: no replay of the intro
+    await addGroup(SECTIONS.map(homeCard).sort((a, b) => (a.about ? 1 : 0) - (b.about ? 1 : 0)), true, P, 25)
+  } else {
+    await addGroup(ITEMS[target].map(itemCard), false, P, 45)
+  }
+  ;(target === 'home' ? stageEl.querySelector('.card') : backBtn).focus({ preventScroll: true })
+  busy = false
+}
+
+// ---------- Zoom module: short card -> long version ----------
+let zoomState = null
+function longHTML(kind, it) {
+  if (kind === 'current') return `<div class="kick">/now · Current work</div><h3>What I'm building now</h3><p class="lede">${esc(NOW.lede)}</p>
+    <div class="grid2">${ITEMS.current.map(c => { const d = NOW.details[c.title] || {}; const pct = Math.round(c.progress * 100)
+      return `<div class="box"><div class="row"><span class="pill ${pct > 50 ? 'ok' : 'warn'}">● ${esc(d.status || 'Active')}</span><span class="pct">${pct}%</span></div>
+        <h4>${esc(c.title)}</h4><p>${esc(c.text)}</p><div class="bar"><span style="width:${pct}%"></span></div>
+        <ul>${(d.notes || []).map(n => `<li>${esc(n)}</li>`).join('')}</ul><div class="row"><span>Next</span><span>${esc(d.next || '—')}</span></div></div>` }).join('')}</div>
+    <div class="section-title">This week</div><div class="box"><div class="log">${NOW.log.map(([t, s]) => `<div><time>${t}</time><span>${esc(s)}</span></div>`).join('')}</div></div>
+    <p class="note">Sample content. Replace with your real current work.</p>`
+  const L = longFor(it)
+  return `<div class="kick">${esc(it.meta)}</div><h3>${esc(it.title)}</h3><p class="lede">${esc(L.lede)}</p>
+    <div class="grid2"><div class="box"><h4>Highlights</h4><ul>${L.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul></div>
+    <div class="box"><h4>Details</h4><div class="row"><span>Section</span><span>${esc(SECTION[view] ? SECTION[view].title : '')}</span></div><div class="row"><span>Tags</span><span>${esc(it.meta)}</span></div><div class="row"><span>Links</span><span>Repo · Demo (placeholders)</span></div></div></div>
+    <p class="note">Sample content. Replace with the real write-up.</p>`
+}
+function zoomTarget() {
+  const pad = innerWidth < 700 ? 8 : 24, top = 64
+  return { x: pad + Math.max(0, (innerWidth - 2 * pad - 1100) / 2), y: top, w: Math.min(1100, innerWidth - 2 * pad), h: innerHeight - top - pad }
+}
+async function openZoom(card) {
+  if (busy || zoomState) return
+  busy = true
+  const kind = card.spec.zoom, it = card.spec.item
+  const from = card.getBoundingClientRect(), to = zoomTarget()
+  const z = document.createElement('section')
+  z.className = 'zoom'
+  z.setAttribute('role', 'dialog'); z.setAttribute('aria-modal', 'true'); z.setAttribute('aria-label', kind === 'current' ? 'Current work' : it.title)
+  z.innerHTML = `<div class="short">${card.innerHTML}</div><div class="long">${longHTML(kind, it)}</div><button class="x" type="button">Close ✕</button>`
+  Object.assign(z.style, { left: to.x + 'px', top: to.y + 'px', width: to.w + 'px', height: to.h + 'px' })
+  document.body.append(z)
+  zoomState = { el: z, card, title: kind === 'current' ? 'now' : it.title.toLowerCase() }
+  z.querySelector('.x').addEventListener('click', closeZoom)
+  card.style.visibility = 'hidden'
+  stageEl.classList.add('dim'); chrome()
+  if (!Kit.reduced) {
+    const sx = from.width / to.w, sy = from.height / to.h
+    const t0 = `translate(${from.left - to.x}px,${from.top - to.y}px) scale(${sx},${sy})`
+    const opts = { duration: 520, easing: 'cubic-bezier(.2,.9,.25,1)' }
+    z.animate([{ transform: t0, borderRadius: `${22 / sx}px / ${22 / sy}px` }, { transform: 'none', borderRadius: '26px' }], opts)
+    // Cross-fade: the card's short face fades out early, the long version fades in as the panel settles
+    z.querySelector('.short').animate([{ opacity: 1 }, { opacity: 0, offset: .3 }, { opacity: 0 }], opts)
+    z.querySelector('.long').animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 0, offset: .4 }, { opacity: 1, transform: 'none' }], opts)
+    await Kit.wait(520)
+  }
+  z.querySelector('.short').remove()
+  z.querySelector('.x').focus({ preventScroll: true })
+  busy = false
+}
+async function closeZoom() {
+  if (!zoomState || busy) return
+  busy = true
+  const { el: z, card } = zoomState
+  const to = card.getBoundingClientRect(), from = z.getBoundingClientRect()
+  stageEl.classList.remove('dim')
+  if (!Kit.reduced) {
+    const sx = to.width / from.width, sy = to.height / from.height
+    z.querySelector('.long').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' })
+    await z.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${to.left - from.left}px,${to.top - from.top}px) scale(${sx},${sy})`, opacity: .4 }],
+      { duration: 380, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished
+  }
+  z.remove(); card.style.visibility = ''
+  zoomState = null; chrome()
+  card.focus({ preventScroll: true })
+  busy = false
+}
+
+backBtn.addEventListener('click', () => zoomState ? closeZoom() : go('home', backBtn))
+Kit.onBack(() => zoomState ? closeZoom() : view !== 'home' && go('home', backBtn))
+intro()
+</script>
+</body>
+</html>

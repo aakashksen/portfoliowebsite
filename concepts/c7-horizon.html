@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Horizon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Hanken+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: the dot grid becomes a 3D plane running to a dusk horizon; cards float above it and tilt toward the pointer */
+:root {
+  --sky: #05050b; --sky-2: #120c1c; --dusk: #ff8a5c; --dot: #c9d4ff; --fg: #f4f1ff; --mute: #a39fb8;
+  --glass: rgba(20,16,32,.55); --edge: rgba(201,212,255,.16); --edge-hi: rgba(255,170,130,.55);
+  --display: "Unbounded", "Arial Black", sans-serif; --body: "Hanken Grotesk", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--sky); color: var(--fg); font: 15px/1.5 var(--body) }
+body { background: linear-gradient(var(--sky) 0%, var(--sky-2) 48%, var(--sky) 100%) fixed }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+main { position: relative; min-height: 100vh; display: grid; place-items: center; perspective: 1400px;
+  padding-block: 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.stage { width: 100%; max-width: 1080px; display: flex; flex-direction: column; gap: 18px; align-items: center;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .4s cubic-bezier(.2,.8,.2,1) }
+.card { background: var(--glass); border: 1px solid var(--edge); border-radius: 20px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  cursor: pointer; transition: border-color .2s, translate .25s, box-shadow .25s }
+.card:hover, .card:focus-visible { border-color: var(--edge-hi); translate: 0 -6px; box-shadow: 0 24px 60px -20px rgba(255,138,92,.45); outline: none }
+.about { width: min(680px, 100%); padding: 30px 32px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 24px; align-items: center }
+.sun { grid-row: span 3; width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(#ffd1a8, var(--dusk) 60%, #c2457a);
+  box-shadow: 0 0 50px rgba(255,138,92,.5); display: grid; place-items: center; font: 800 24px var(--display); color: #2a0f1e }
+.about h1 { margin: 0; font: 800 clamp(24px, 3.2vw, 38px)/1.05 var(--display); letter-spacing: -.01em; text-wrap: balance }
+.about .role { margin: 0; color: var(--mute); font-size: 17px }
+.about .line { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 14px }
+.skills { grid-column: 2 }
+.email { color: var(--dusk); user-select: all; overflow-wrap: anywhere }
+.chip { font-size: 12px; padding: 3px 10px; border: 1px solid var(--edge); border-radius: 999px }
+.status::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #7ef0b4; margin-right: 7px; vertical-align: 1px }
+.row { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px }
+.sec { padding: 20px 20px 22px; min-height: 170px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px }
+.sec .path { font-size: 12px; color: var(--mute); letter-spacing: .06em; display: flex; justify-content: space-between }
+.sec h2 { margin: 0; font: 600 clamp(17px, 1.7vw, 21px)/1.15 var(--display) }
+.sec p { margin: 6px 0 0; color: var(--mute); font-size: 14px }
+dialog { width: min(560px, calc(100vw - 32px)); background: rgba(16,12,26,.95); color: var(--fg); border: 1px solid var(--edge-hi); border-radius: 22px; padding: 28px }
+dialog::backdrop { background: rgba(3,3,8,.6); backdrop-filter: blur(4px) }
+dialog[open] { animation: float .45s cubic-bezier(.16,1,.3,1) }
+@keyframes float { from { opacity: 0; transform: perspective(800px) rotateX(14deg) translateY(30px) } }
+dialog h3 { font: 800 34px/1.05 var(--display); margin: 12px 0 8px }
+dialog .path { color: var(--dusk); font-size: 13px }
+.close { float: right; background: none; border: 1px solid var(--edge); color: var(--fg); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer }
+.note { color: var(--mute); font-size: 13px; border-top: 1px solid var(--edge); padding-top: 12px }
+@media (max-width: 900px) { .row { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 520px) {
+  .row { grid-template-columns: 1fr } .about { grid-template-columns: 1fr; text-align: left } .skills { grid-column: auto } .sun { grid-row: auto; width: 64px; height: 64px; font-size: 18px }
+}
+@media (prefers-reduced-motion: reduce) { .stage { transition: none } }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<main>
+  <div class="stage" id="stage">
+    <section class="card about" data-id="about">
+      <div class="sun" data-person="initials"></div>
+      <h1 data-person="name"></h1>
+      <p class="role" data-person="role"></p>
+      <div class="line"><span class="email" data-person="email" data-noopen></span><span class="status" data-person="status"></span></div>
+      <div class="line skills" data-skills="chip"></div>
+    </section>
+    <div class="row">
+      <article class="card sec" data-id="projects"><div class="path"><span>/projects</span><span>↗</span></div><div><h2>Projects</h2><p>My creative work</p></div></article>
+      <article class="card sec" data-id="experience"><div class="path"><span>/experience</span><span>↗</span></div><div><h2>Experience</h2><p>My professional journey</p></div></article>
+      <article class="card sec" data-id="blog"><div class="path"><span>/blog</span><span>↗</span></div><div><h2>Blog</h2><p>Thoughts &amp; insights</p></div></article>
+      <article class="card sec" data-id="current"><div class="path"><span>/now</span><span>↗</span></div><div><h2>Current Work</h2><p>What I'm building now</p></div></article>
+    </div>
+  </div>
+</main>
+<dialog id="panel" aria-labelledby="panel-title">
+  <button class="close" data-close>Close</button>
+  <div class="path" data-slot="path"></div>
+  <h3 id="panel-title" data-slot="title"></h3>
+  <p data-slot="kicker"></p>
+  <p data-slot="body"></p>
+  <p class="note">Placeholder content. This section is still being built.</p>
+</dialog>
+<script src="shared.js"></script>
+<script>
+const t0 = performance.now()
+const LIFE = 2600, STEP = 0.6
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 5000, life: LIFE, mouseRadius: 0, ambient: true,
+  render(ctx, _dots, W, H, now, _mouse, ripples) {
+    const rise = Kit.reduced ? 1 : Math.min(1, (now - t0) / 1100)
+    const camH = 0.25 + 1.15 * (1 - (1 - rise) ** 3)
+    const f = Math.max(W, 700) * 0.85
+    const horizon = H * 0.56
+    // Horizon glow
+    const g = ctx.createLinearGradient(0, horizon - 120, 0, horizon + 40)
+    g.addColorStop(0, 'rgba(255,138,92,0)'); g.addColorStop(.75, 'rgba(255,138,92,.22)'); g.addColorStop(1, 'rgba(255,138,92,0)')
+    ctx.fillStyle = g; ctx.fillRect(0, horizon - 120, W, 160)
+    // Ripples start on the plane just in front of the card that spawned them
+    const R = ripples.map(r => ({ x: (r.x - W / 2) * 5 / f, z: 5, age: (now - r.t) / 1000, s: r.s }))
+    const scroll = Kit.reduced ? 0 : (now * 0.0005) % STEP
+    ctx.fillStyle = '#c9d4ff'
+    for (let z = 1 + STEP - scroll; z < 34; z += STEP) {
+      const fog = Math.min(1, (34 - z) / 10)
+      for (let x = -26; x <= 26; x += STEP) {
+        let h = 0
+        for (const r of R) {
+          const dist = Math.hypot(x - r.x, z - r.z)
+          const b = 1 - Math.abs(dist - r.age * 7) / 1.4
+          if (b > 0) h += b * b * (1 - r.age * 1000 / LIFE) * 0.55 * r.s
+        }
+        const sx = W / 2 + x * f / z
+        if (sx < -4 || sx > W + 4) continue
+        const sy = horizon + (camH - h) * f / z
+        const s = Math.max(0.7, 2.6 / z * 2)
+        ctx.globalAlpha = Math.min(1, (1.8 / z + h * 1.4) * fog)
+        ctx.fillRect(sx - s / 2, sy - s / 2, s, s)
+      }
+    }
+    ctx.globalAlpha = 1
+  },
+})
+Kit.fillPerson()
+Kit.wirePanels(field)
+
+const stage = document.getElementById('stage')
+if (!Kit.reduced && matchMedia('(pointer: fine)').matches) {
+  addEventListener('pointermove', e => {
+    const nx = e.clientX / innerWidth - .5, ny = e.clientY / innerHeight - .5
+    stage.style.setProperty('--ry', `${nx * 6}deg`)
+    stage.style.setProperty('--rx', `${-ny * 5}deg`)
+  })
+}
+const order = ['about', 'projects', 'experience', 'blog', 'current'].map(id => document.querySelector(`[data-id="${id}"]`))
+Kit.assemble(order, (el, i) => ({
+  delay: 350 + i * 90, duration: 800,
+  keyframes: [{ transform: 'translateY(120px) rotateX(35deg)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+}), (el, instant) => { if (!instant) { const c = Kit.centerOf(el); field.ripple(c.x, c.y, el.dataset.id === 'about' ? 1.4 : .8) } })
+</script>
+</body>
+</html>

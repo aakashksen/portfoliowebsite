@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Deep Zoom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an infinite design canvas. Each entry is a frame holding its blocks in miniature; opening it flies the camera in until they are readable */
+:root {
+  --bg: #121214; --frame: #1c1c20; --block: #26262c; --fg: #f1f1f4; --mute: #8b8b96; --sel: #4c8dff; --sel-soft: rgba(76,141,255,.16); --warm: #ffb86b;
+  --sans: "Schibsted Grotesk", system-ui, sans-serif; --mono: "Martian Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); font: 14px/1.4 var(--sans) }
+#grid { position: fixed; inset: 0; width: 100%; height: 100% }
+#vp { position: fixed; inset: 0; overflow: hidden; touch-action: none; cursor: grab }
+#vp.drag { cursor: grabbing }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; --z: 1; --s: 1 }
+.frame { position: absolute; background: var(--frame); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; outline: none;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 30px 60px -30px rgba(0,0,0,.8) }
+.frame::after { content: ""; position: absolute; inset: -2px; border: 2px solid var(--sel); border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity .15s }
+.frame:hover::after, .frame:focus-visible::after, .frame.on::after { opacity: 1 }
+.fname { position: absolute; left: 0; bottom: 100%; padding-bottom: calc(6px / var(--s)); font: 500 calc(10px / var(--s)) var(--mono); color: var(--mute); white-space: nowrap }
+.frame:hover .fname, .frame.on .fname { color: var(--sel) }
+.dims { position: absolute; left: 50%; top: calc(100% + 6px / var(--s)); translate: -50% 0; font: 500 calc(9px / var(--s)) var(--mono); background: var(--sel); color: #fff; padding: .2em .5em; border-radius: .3em; opacity: 0; white-space: nowrap }
+.frame:hover .dims, .frame.on .dims { opacity: 1 }
+.ghost { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px; pointer-events: none;
+  opacity: clamp(0, calc((1.7 - var(--z)) / .5), 1); background: var(--frame); border-radius: 6px }
+.ghost h2 { margin: 0; font: 800 46px/1 var(--sans); letter-spacing: -.03em }
+.ghost p { margin: 6px 0 0; color: var(--mute); font-size: 15px }
+.ghost .count { font: 500 10px var(--mono); color: var(--warm); margin-top: 10px }
+.top { display: flex; justify-content: space-between; align-items: baseline; font: 500 8px var(--mono); color: var(--mute) }
+.top b { font: 800 16px var(--sans); color: var(--fg) }
+.inner { flex: 1; display: grid; gap: 8px; opacity: clamp(.15, calc((var(--z) - 1.15) / .6), 1) }
+.blk { background: var(--block); border-radius: 4px; padding: 9px 10px; display: flex; flex-direction: column; gap: 3px; min-width: 0 }
+.blk .m { font: 500 6px var(--mono); color: var(--warm) }
+.blk h3 { margin: 0; font: 700 10px/1.2 var(--sans) }
+.blk p { margin: 0; font-size: 7px; line-height: 1.4; color: var(--mute) }
+.bar { height: 3px; background: rgba(255,255,255,.1); border-radius: 2px; margin-top: 4px } .bar span { display: block; height: 100%; background: var(--sel); border-radius: 2px }
+.about { background: #1f2340 } .about .ghost { background: #1f2340 }
+.portrait .blk h3 { font-size: 14px } .portrait .blk p { font-size: 11px } .portrait .blk .m { font-size: 9px }
+.hud { position: fixed; z-index: 3; left: 50%; translate: -50% 0; bottom: max(16px, env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 4px;
+  background: #1e1e22; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 5px; box-shadow: 0 10px 30px rgba(0,0,0,.5); font: 500 11px var(--mono); max-width: calc(100vw - 32px) }
+.hud button { font: inherit; color: var(--fg); background: none; border: 0; border-radius: 6px; padding: 7px 10px; cursor: pointer; white-space: nowrap }
+.hud button:hover, .hud button:focus-visible { background: rgba(255,255,255,.08); outline: none }
+.hud .crumb { color: var(--mute); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.hud .crumb b { color: var(--fg); font-weight: 500 }
+.hud .pct { min-width: 52px; text-align: right; color: var(--mute); font-variant-numeric: tabular-nums; padding-right: 6px }
+.file { position: fixed; z-index: 3; top: max(14px, env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); font: 500 11px var(--mono); color: var(--mute) }
+.file b { color: var(--fg); font-weight: 500 }
+.hint { position: fixed; z-index: 3; top: max(14px, env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); font: 500 11px var(--mono); color: var(--mute) }
+@media (max-width: 700px) { .hint { display: none } }
+</style>
+</head>
+<body>
+<canvas id="grid" aria-hidden="true"></canvas>
+<div class="file"><b>aakash-portfolio.fig</b> · Page 1</div>
+<div class="hint">drag to pan · scroll to zoom · click a frame</div>
+<div id="vp"><div id="world"></div></div>
+<div class="hud">
+  <button type="button" id="back" hidden>← Back</button>
+  <span class="crumb" id="crumb"><b>Home</b></span>
+  <button type="button" id="fit">Fit</button>
+  <span class="pct" id="pct">100%</span>
+</div>
+<script src="kit2.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const vp = document.getElementById('vp'), world = document.getElementById('world')
+const portrait = () => innerWidth < 700
+const COLS = { projects: 3, experience: 3, blog: 2, current: 3, about: 1 }
+
+// World-space layout of the frames
+function layout() {
+  if (!portrait()) return {
+    w: 1500, h: 900,
+    about: [560, 100, 380, 700], projects: [40, 100, 480, 330], experience: [980, 100, 480, 330], blog: [40, 470, 480, 330], current: [980, 470, 480, 330] }
+  const L = { w: 360 }
+  let y = 0
+  for (const id of ['about', 'projects', 'experience', 'blog', 'current']) { const h = 90 + ITEMS[id].length * 92; L[id] = [0, y, 360, h]; y += h + 50 }
+  L.h = y
+  return L
+}
+
+function build() {
+  const L = layout()
+  world.className = portrait() ? 'portrait' : ''
+  world.style.width = L.w + 'px'; world.style.height = L.h + 'px'
+  world.innerHTML = ['about', 'projects', 'experience', 'blog', 'current'].map(id => {
+    const s = SECTION[id], [x, y, w, h] = L[id], items = ITEMS[id], cols = portrait() ? 1 : COLS[id]
+    return `<section class="frame ${id === 'about' ? 'about' : ''}" data-go="${id}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">
+      <span class="fname">${s.path.slice(1)}</span><span class="dims">${w} × ${h}</span>
+      <div class="top"><b>${esc(id === 'about' ? PERSON.name : s.title)}</b><span>${id === 'about' ? esc(PERSON.email) : 'sample content'}</span></div>
+      <div class="inner" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${items.map(it => `<div class="blk"><span class="m">${esc(it.meta)}</span><h3>${esc(it.title)}</h3><p>${esc(it.text)}</p>${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>`).join('')}</div>
+      <div class="ghost"><div><h2>${esc(id === 'about' ? PERSON.first : s.title)}</h2><p>${esc(id === 'about' ? PERSON.role : s.kicker)}</p><div class="count">${items.length} blocks inside →</div></div></div>
+    </section>`
+  }).join('')
+  world.querySelectorAll('[data-go]').forEach(el => Kit.pressable(el, () => { if (!dragged) open(el.dataset.go) }))
+  return L
+}
+
+// Camera
+const cam = { x: 0, y: 0, s: 1 }
+let L = build(), view = 'home'
+function fitRect(x, y, w, h, pad) {
+  const s = Math.min((innerWidth - pad * 2) / w, (innerHeight - pad * 2 - 60) / h)
+  return { s, x: innerWidth / 2 - (x + w / 2) * s, y: (innerHeight - 50) / 2 - (y + h / 2) * s }
+}
+const homeCam = () => fitRect(0, 0, L.w, L.h, portrait() ? 20 : 40)
+
+const gridCv = document.getElementById('grid'), gctx = gridCv.getContext('2d')
+function sizeGrid() { const d = Math.min(devicePixelRatio || 1, 2); gridCv.width = innerWidth * d; gridCv.height = innerHeight * d; gctx.setTransform(d, 0, 0, d, 0, 0) }
+function apply() {
+  world.style.transform = `translate(${cam.x}px,${cam.y}px) scale(${cam.s})`
+  world.style.setProperty('--s', cam.s.toFixed(4))
+  world.style.setProperty('--z', (cam.s / homeCam().s).toFixed(3))
+  document.getElementById('pct').textContent = Math.round(cam.s * 100) + '%'
+  // Dot grid follows the camera; spacing doubles as you zoom out so it never gets dense
+  let step = 24 * cam.s
+  while (step < 14) step *= 2
+  while (step > 56) step /= 2
+  gctx.clearRect(0, 0, innerWidth, innerHeight)
+  gctx.fillStyle = '#3a3a42'
+  const ox = ((cam.x % step) + step) % step, oy = ((cam.y % step) + step) % step
+  for (let y = oy; y < innerHeight; y += step) for (let x = ox; x < innerWidth; x += step) gctx.fillRect(x - .75, y - .75, 1.5, 1.5)
+}
+
+let tween = 0
+function flyTo(t, dur = 950) {
+  cancelAnimationFrame(tween)
+  if (Kit.reduced) { Object.assign(cam, t); apply(); return Promise.resolve() }
+  const a = { ...cam }, t0 = performance.now()
+  const ease = k => k < .5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2
+  return new Promise(res => {
+    const step = now => {
+      const k = Math.min(1, (now - t0) / dur), e = ease(k)
+      // Interpolate zoom in log space, and pan so the screen-centre point moves smoothly
+      cam.s = Math.exp(Math.log(a.s) + (Math.log(t.s) - Math.log(a.s)) * e)
+      const cx = innerWidth / 2, cy = innerHeight / 2
+      const wa = { x: (cx - a.x) / a.s, y: (cy - a.y) / a.s }, wt = { x: (cx - t.x) / t.s, y: (cy - t.y) / t.s }
+      const wx = wa.x + (wt.x - wa.x) * e, wy = wa.y + (wt.y - wa.y) * e
+      cam.x = cx - wx * cam.s; cam.y = cy - wy * cam.s
+      apply()
+      if (k < 1) tween = requestAnimationFrame(step); else res()
+    }
+    tween = requestAnimationFrame(step)
+  })
+}
+
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+function setView(id) {
+  view = id
+  backBtn.hidden = id === 'home'
+  crumb.innerHTML = id === 'home' ? '<b>Home</b>' : `Home / <b>${esc(id === 'about' ? 'About' : SECTION[id].title)}</b>`
+  world.querySelectorAll('.frame').forEach(f => f.classList.toggle('on', f.dataset.go === id))
+}
+function open(id) {
+  const [x, y, w, h] = L[id]
+  setView(id)
+  flyTo(fitRect(x, y, w, h, portrait() ? 8 : 48))
+}
+function home() { setView('home'); flyTo(homeCam()) }
+backBtn.addEventListener('click', home)
+document.getElementById('fit').addEventListener('click', () => view === 'home' ? flyTo(homeCam()) : open(view))
+Kit.onBack(() => { if (view !== 'home') home() })
+
+// Pan by dragging, zoom with the wheel around the pointer
+let down = null, dragged = false
+vp.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y }; dragged = false })
+addEventListener('pointermove', e => {
+  if (!down) return
+  const dx = e.clientX - down.x, dy = e.clientY - down.y
+  if (!dragged && Math.hypot(dx, dy) > 5) { dragged = true; vp.classList.add('drag'); cancelAnimationFrame(tween) }
+  if (dragged) { cam.x = down.cx + dx; cam.y = down.cy + dy; apply() }
+})
+addEventListener('pointerup', () => { down = null; vp.classList.remove('drag'); setTimeout(() => { dragged = false }, 0) })
+vp.addEventListener('wheel', e => {
+  e.preventDefault(); cancelAnimationFrame(tween)
+  if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) { cam.x -= e.deltaX; apply(); return }
+  const k = Math.exp(-e.deltaY * 0.0015), s = Math.min(6, Math.max(.15, cam.s * k))
+  cam.x = e.clientX - (e.clientX - cam.x) * (s / cam.s); cam.y = e.clientY - (e.clientY - cam.y) * (s / cam.s); cam.s = s
+  apply()
+}, { passive: false })
+
+let rt
+addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { sizeGrid(); L = build(); setView(view); view === 'home' ? Object.assign(cam, homeCam()) : Object.assign(cam, fitRect(...L[view], 48)); apply() }, 120) })
+
+// Intro: start far out and fly in to the home view
+sizeGrid()
+const h = homeCam()
+Object.assign(cam, { s: h.s * .08, x: innerWidth / 2 - (L.w / 2) * h.s * .08, y: innerHeight / 2 - (L.h / 2) * h.s * .08 })
+apply()
+flyTo(h, 1300)
+</script>
+</body>
+</html>

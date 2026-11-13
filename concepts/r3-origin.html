@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Origin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the proof of concept, done right. Blocks spawn one at a time in the middle and shove the others aside; each spawn ripples the dot field */
+:root {
+  --bg: #050507; --glass: rgba(255,255,255,.055); --glass-hi: rgba(255,255,255,.09);
+  --line: rgba(255,255,255,.12); --line-hi: rgba(255,255,255,.3);
+  --fg: #f2f3f7; --muted: #9597a6; --accent: #8fb0ff; --ok: #5be39a;
+  --sans: "Geist", ui-sans-serif, system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+header { position: relative; z-index: 2; display: flex; align-items: center; gap: 16px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.crumb { font: 500 13px var(--mono); color: var(--muted) } .crumb b { color: var(--fg); font-weight: 500 }
+.back { font: 500 13px var(--mono); color: var(--fg); background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer }
+.back[hidden] { display: none }
+.back:hover { background: rgba(255,255,255,.12) }
+.back:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }
+main { position: relative; padding-block: 8px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#stage { position: relative; height: calc(100vh - 64px - 48px) }
+.card { position: absolute; background: var(--glass); border: 1px solid var(--line); border-radius: 22px; padding: 22px 24px; overflow: hidden;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); display: flex; flex-direction: column; justify-content: space-between; gap: 18px;
+  transition: left .5s cubic-bezier(.2,1.25,.35,1), top .5s cubic-bezier(.2,1.25,.35,1), width .5s cubic-bezier(.2,1.25,.35,1), height .5s cubic-bezier(.2,1.25,.35,1), border-color .2s, background .2s }
+.card.go { cursor: pointer }
+.card.go:hover { border-color: var(--line-hi); background: var(--glass-hi) }
+.path { font: 500 12px/1 var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 12px }
+.card.go:hover .arrow { color: var(--fg) }
+h2 { margin: 0 0 6px; font-size: clamp(20px, 2.2vw, 28px); font-weight: 600; letter-spacing: -.02em; text-wrap: balance }
+.card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5 }
+.about { justify-content: center; align-items: center; text-align: center; gap: 14px }
+.avatar { width: 80px; height: 80px; border-radius: 50%; display: grid; place-items: center; font: 600 26px var(--sans); background: radial-gradient(circle at 30% 25%, #c9d6ff, #4a5bd8 70%); color: #0b0d1a; flex: none }
+.about h1 { margin: 0; font-size: clamp(24px, 2.4vw, 30px); font-weight: 650; letter-spacing: -.025em; text-wrap: balance }
+.email { font: 500 13px var(--mono); color: var(--accent); user-select: all; overflow-wrap: anywhere }
+.status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px }
+.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok) }
+.meta { font: 500 12px var(--mono); color: var(--accent) }
+.bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 12px }
+.bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--ok)) }
+.title { position: absolute; left: 0; right: 0; top: 0; text-align: center; font: 600 13px var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; pointer-events: none }
+@media (max-width: 700px) { #stage { height: auto } }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>← Back</button>
+  <span class="crumb" id="crumb"><b>~</b></span>
+</header>
+<main><div id="stage"></div></main>
+<script src="kit2.js"></script>
+<script src="kit3.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 16, speed: 650, band: 110, life: 1900, push: 18,
+  render(ctx, dots) {
+    ctx.fillStyle = '#ffffff'
+    for (const d of dots) { const s = 1.2 + d.e * 1.8; ctx.globalAlpha = 0.13 + d.e * 0.8; ctx.fillRect(d.x - s / 2, d.y - s / 2, s, s) }
+    ctx.globalAlpha = 1
+  },
+})
+
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'card' + (spec.go ? ' go' : '') + (spec.about ? ' about' : '')
+  el.innerHTML = spec.html
+  if (spec.go) Kit.pressable(el, () => go(spec.go))
+  return el
+}
+const stage = Kit.Stage(document.getElementById('stage'), {
+  make,
+  layout: (k, W, H, ctx) => Kit.growLayout(k, W, H, { bento: ctx.home, cellH: 260, cellW: 340 }),
+  interval: 210,
+  enter: el => el.animate([{ transform: 'scale(.2)', opacity: 0 }, { transform: 'scale(1.06)', opacity: 1, offset: .7 }, { transform: 'none', opacity: 1 }],
+    { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1)' }),
+  exit: el => el.animate([{ transform: 'none', opacity: 1 }, { transform: 'scale(.3)', opacity: 0 }], { duration: 160, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }),
+  onSpawn: el => setTimeout(() => { const c = Kit.centerOf(el); field.ripple(c.x, c.y, el.classList.contains('about') ? 1.4 : .9) }, 140),
+})
+
+const homeSpecs = () => SECTIONS.map(s => s.id === 'about'
+  ? { go: 'about', about: true, html: `<div class="avatar">${PERSON.initials}</div><div><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)}</p></div>
+      <span class="email">${esc(PERSON.email)}</span><span class="status"><i></i>${esc(PERSON.status)}</span>` }
+  : { go: s.id, html: `<div class="path"><span>${s.path}</span><span class="arrow">↗ ${ITEMS[s.id].length}</span></div><div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` })
+const sectionSpecs = id => ITEMS[id].map(it => ({ html: `<span class="meta">${esc(it.meta)}</span><div><h2>${esc(it.title)}</h2><p${it.title === 'Contact' ? ' class="email"' : ''}>${esc(it.text)}</p>
+  ${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>` }))
+
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+let view = null, busy = false
+async function go(target) {
+  if (busy || target === view) return
+  busy = true
+  if (view) await stage.clear()
+  view = target
+  backBtn.hidden = target === 'home'
+  crumb.innerHTML = target === 'home' ? '<b>~</b>' : `~ / <b>${esc(target === 'about' ? 'about' : SECTION[target].path.slice(1))}</b> · sample content`
+  scrollTo(0, 0)
+  await stage.spawn(target === 'home' ? homeSpecs() : sectionSpecs(target), { home: target === 'home' })
+  ;(target === 'home' ? document.querySelector('.card.go') : backBtn).focus({ preventScroll: true })
+  busy = false
+}
+backBtn.addEventListener('click', () => go('home'))
+Kit.onBack(() => go('home'))
+go('home')
+</script>
+</body>
+</html>

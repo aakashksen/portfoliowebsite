@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Grid System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: huge condensed name across the top, a ruled 4-column index of sections below, profile block top-right */
+:root {
+  --paper: #eef0f2; --ink: #111317; --mute: #5d636d; --rule: #c4c9d0; --red: #e3262f; --on-red: #ffffff;
+  --display: "Archivo", "Arial Narrow", sans-serif; --body: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--body) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+main { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; gap: 48px;
+  padding-block: 28px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 1360px; margin: 0 auto }
+.top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 32px; align-items: start }
+.meta { display: flex; justify-content: space-between; font: 500 12px var(--mono); color: var(--mute); text-transform: uppercase; letter-spacing: .08em; grid-column: 1 / -1 }
+.rule { height: 2px; background: var(--ink); transform-origin: left; grid-column: 1 / -1 }
+h1 { margin: 0; font-family: var(--display); font-variation-settings: "wdth" 66; font-weight: 850; text-transform: uppercase;
+  font-size: clamp(52px, 8.8vw, 168px); line-height: .84; letter-spacing: -.01em }
+h1 .line { display: block; overflow: hidden }
+h1 .line span { display: inline-block }
+h1 .dot { color: var(--red) }
+.profile { display: flex; flex-direction: column; gap: 14px; padding-top: 8px; border-top: 2px solid var(--red) }
+.profile .role { font: 600 20px/1.2 var(--display); font-variation-settings: "wdth" 90 }
+.profile dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px }
+.profile dt { font: 500 11px/1.9 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--mute) }
+.profile dd { margin: 0; min-width: 0; overflow-wrap: anywhere }
+.status::before { content: ""; display: inline-block; width: 8px; height: 8px; background: var(--red); margin-right: 8px }
+.skill + .skill::before { content: " / "; color: var(--mute) }
+.index { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink) }
+.col { position: relative; padding: 16px 18px 22px; min-height: 230px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+  border-right: 1px solid var(--rule); cursor: pointer; background: transparent; transition: background .18s, color .18s }
+.col:last-child { border-right: 0 }
+.col:hover, .col:focus-visible { background: var(--red); color: var(--on-red); outline: none }
+.col .path { font: 500 12px var(--mono); letter-spacing: .04em; display: flex; justify-content: space-between }
+.col h2 { margin: 0; font-family: var(--display); font-variation-settings: "wdth" 72; font-weight: 800; text-transform: uppercase; font-size: clamp(30px, 3.6vw, 52px); line-height: .92 }
+.col p { margin: 8px 0 0; font-size: 14px; color: var(--mute) }
+.col:hover p, .col:focus-visible p { color: var(--on-red) }
+.about-link { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; cursor: pointer; align-self: start; border-bottom: 1px solid currentColor }
+dialog { margin: 0 0 0 auto; height: 100%; max-height: none; width: min(520px, 100vw); border: 0; border-left: 8px solid var(--red); background: var(--paper); color: var(--ink); padding: 32px 28px }
+dialog::backdrop { background: rgba(17,19,23,.35) }
+dialog[open] { animation: slide .4s cubic-bezier(.16,1,.3,1) }
+@keyframes slide { from { transform: translateX(100%) } }
+dialog h3 { font-family: var(--display); font-variation-settings: "wdth" 70; font-weight: 850; text-transform: uppercase; font-size: 64px; line-height: .9; margin: 18px 0 12px; text-wrap: balance }
+dialog .path { font: 500 12px var(--mono); color: var(--red) }
+.close { background: var(--ink); color: var(--paper); border: 0; font: 500 12px var(--mono); padding: 8px 12px; cursor: pointer; text-transform: uppercase; letter-spacing: .08em }
+.note { font: 12px var(--mono); color: var(--mute); border-top: 1px solid var(--rule); padding-top: 12px }
+@media (max-width: 900px) {
+  .top { grid-template-columns: 1fr }
+  .index { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .col:nth-child(2) { border-right: 0 } .col:nth-child(-n+2) { border-bottom: 1px solid var(--rule) }
+}
+@media (max-width: 520px) {
+  .index { grid-template-columns: 1fr } .col { border-right: 0; border-bottom: 1px solid var(--rule); min-height: 150px }
+}
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<main>
+  <div class="top">
+    <div class="meta"><span>Portfolio — Index</span><span id="date"></span></div>
+    <div class="rule" id="rule"></div>
+    <h1 aria-label="Aakash Senthilnathan"><span class="line"><span>Aakash</span></span><span class="line"><span>Senthilnathan<span class="dot">.</span></span></span></h1>
+    <aside class="profile">
+      <div class="role" data-person="role"></div>
+      <dl>
+        <dt>Email</dt><dd data-person="email"></dd>
+        <dt>Stack</dt><dd data-skills="skill"></dd>
+        <dt>Status</dt><dd class="status" data-person="status"></dd>
+      </dl>
+      <span class="about-link" data-id="about">About me →</span>
+    </aside>
+  </div>
+  <nav class="index" aria-label="Sections">
+    <div class="col" data-id="projects"><div class="path"><span>/projects</span><span>→</span></div><div><h2>Projects</h2><p>My creative work</p></div></div>
+    <div class="col" data-id="experience"><div class="path"><span>/experience</span><span>→</span></div><div><h2>Experience</h2><p>My professional journey</p></div></div>
+    <div class="col" data-id="blog"><div class="path"><span>/blog</span><span>→</span></div><div><h2>Blog</h2><p>Thoughts &amp; insights</p></div></div>
+    <div class="col" data-id="current"><div class="path"><span>/now</span><span>→</span></div><div><h2>Current Work</h2><p>What I'm building now</p></div></div>
+  </nav>
+</main>
+<dialog id="panel" aria-labelledby="panel-title">
+  <button class="close" data-close>Close</button>
+  <h3 id="panel-title" data-slot="title"></h3>
+  <div class="path" data-slot="path"></div>
+  <p data-slot="kicker"></p>
+  <p data-slot="body"></p>
+  <p class="note">Placeholder content. This section is still being built.</p>
+</dialog>
+<script src="shared.js"></script>
+<script>
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 34, speed: 800, band: 120, life: 1500, push: 10, mouseRadius: 140, mousePush: 8,
+  render(ctx, dots) {
+    ctx.lineWidth = 1
+    for (const d of dots) {
+      const s = 3 + d.e * 4
+      ctx.strokeStyle = d.e > .15 ? '#e3262f' : '#111317'
+      ctx.globalAlpha = 0.16 + d.e * 0.7
+      ctx.beginPath()
+      ctx.moveTo(d.x - s, d.y); ctx.lineTo(d.x + s, d.y)
+      ctx.moveTo(d.x, d.y - s); ctx.lineTo(d.x, d.y + s)
+      ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+  },
+})
+Kit.fillPerson()
+Kit.wirePanels(field)
+document.getElementById('date').textContent = new Date().toISOString().slice(0, 10)
+
+if (!Kit.reduced) {
+  const ease = 'cubic-bezier(.7,0,.2,1)'
+  document.getElementById('rule').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 600, easing: ease })
+  document.querySelectorAll('h1 .line > span').forEach((s, i) =>
+    s.animate([{ transform: 'translateY(105%)' }, { transform: 'none' }], { duration: 650, delay: 120 + i * 90, easing: ease, fill: 'backwards' }))
+  document.querySelector('.profile').animate([{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 450, fill: 'backwards' })
+}
+const cols = [...document.querySelectorAll('.col')]
+Kit.assemble(cols, (el, i) => ({
+  delay: 380 + i * 90, duration: 520, easing: 'cubic-bezier(.7,0,.2,1)',
+  keyframes: [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }],
+}), (el, instant) => {
+  if (instant) return
+  const r = el.getBoundingClientRect()
+  field.ripple(r.left + r.width / 2, r.top, .8)
+})
+</script>
+</body>
+</html>

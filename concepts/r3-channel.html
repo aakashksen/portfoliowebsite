@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Channel Surf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Chivo:wght@400;700;900&display=swap">
+<style>
+/* Layout: a wall of small CRT screens. Each block tunes in through static; opening an entry changes channel and the screens re-tune one by one */
+:root {
+  --room: #0b0b0d; --bezel: #1d1c1a; --bezel-hi: #2b2a27; --screen: #0f1513; --phos: #e9f5ee; --osd: #49ff8b; --mute: #7f8b85; --blue: #2340ff;
+  --osdf: "VT323", ui-monospace, monospace; --body: "Chivo", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--room); color: var(--phos); font: 15px/1.45 var(--body) }
+#noise { position: fixed; inset: 0; width: 100%; height: 100%; opacity: .5 }
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px) }
+header { position: relative; z-index: 3; display: flex; align-items: center; gap: 18px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font: 400 28px/1 var(--osdf); color: var(--osd); text-shadow: 0 0 8px rgba(73,255,139,.6) }
+header .vol { margin-left: auto; font-size: 22px; color: var(--mute); text-shadow: none }
+.back { font: 400 24px/1 var(--osdf); color: var(--osd); background: none; border: 2px solid var(--osd); padding: 4px 12px; cursor: pointer; text-shadow: inherit }
+.back[hidden] { display: none }
+.back:focus-visible, .tv:focus-visible { outline: 2px solid var(--osd); outline-offset: 3px }
+main { position: relative; padding-block: 8px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#stage { position: relative; height: calc(100vh - 64px - 48px) }
+.tv { position: absolute; background: linear-gradient(var(--bezel-hi), var(--bezel)); border-radius: 18px; padding: 12px; box-shadow: 0 20px 40px -20px #000, inset 0 1px 0 rgba(255,255,255,.08);
+  transition: left .5s cubic-bezier(.2,1.2,.35,1), top .5s cubic-bezier(.2,1.2,.35,1), width .5s cubic-bezier(.2,1.2,.35,1), height .5s cubic-bezier(.2,1.2,.35,1) }
+.tv.go { cursor: pointer }
+.scr { position: relative; height: 100%; border-radius: 22px / 30px; background: radial-gradient(120% 120% at 50% 40%, #16201c, var(--screen) 70%); overflow: hidden;
+  padding: 16px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; box-shadow: inset 0 0 40px rgba(0,0,0,.8) }
+.tv.go:hover .scr { background: radial-gradient(120% 120% at 50% 40%, #1d2b25, var(--screen) 70%) }
+.snow { position: absolute; inset: 0; pointer-events: none; opacity: 0; background-size: 128px 128px; mix-blend-mode: screen }
+.ch { font: 400 24px/1 var(--osdf); color: var(--osd); text-shadow: 0 0 8px rgba(73,255,139,.6); display: flex; justify-content: space-between }
+.scr h2 { margin: 0 0 4px; font: 900 clamp(22px, 2.3vw, 30px)/1.05 var(--body); letter-spacing: -.01em; text-shadow: 0 0 12px rgba(233,245,238,.35) }
+.scr p { margin: 0; color: var(--mute) }
+.about .scr { background: radial-gradient(120% 120% at 50% 40%, #2b47ff, #12207a 75%); justify-content: center; gap: 12px }
+.about .scr p { color: #c9d2ff }
+.about h1 { margin: 0; font: 900 clamp(28px, 3vw, 40px)/1 var(--body) }
+.email { font: 400 22px/1 var(--osdf); user-select: all; overflow-wrap: anywhere }
+.bar { height: 10px; border: 2px solid var(--osd); margin-top: 8px; padding: 1px } .bar span { display: block; height: 100%; background: var(--osd) }
+@media (max-width: 700px) { #stage { height: auto } header .vol { display: none } }
+</style>
+</head>
+<body>
+<canvas id="noise" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>◀ PREV CH</button>
+  <span id="osd">CH 00 · HOME</span>
+  <span class="vol">VOL ▮▮▮▮▮▮▯▯▯</span>
+</header>
+<main><div id="stage"></div></main>
+<script src="kit2.js"></script>
+<script src="kit3.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+
+// One noise tile, reused as the static texture inside every screen
+const tile = document.createElement('canvas'); tile.width = tile.height = 128
+{ const t = tile.getContext('2d'), d = t.createImageData(128, 128); for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255 } t.putImageData(d, 0, 0) }
+const SNOW = `url(${tile.toDataURL()})`
+
+// Room background: faint static that flares and a rolling interference bar on every spawn
+const cv = document.getElementById('noise'), ctx = cv.getContext('2d')
+const small = document.createElement('canvas'), sctx = small.getContext('2d')
+let bars = [], raf = 0, flare = 0
+function size() { cv.width = innerWidth; cv.height = innerHeight; small.width = Math.ceil(innerWidth / 4); small.height = Math.ceil(innerHeight / 4); kick() }
+function kick() { if (!raf) raf = requestAnimationFrame(frame) }
+function frame(now) {
+  raf = 0
+  const d = sctx.createImageData(small.width, small.height)
+  const a = 10 + flare * 60
+  for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = a }
+  sctx.putImageData(d, 0, 0)
+  ctx.clearRect(0, 0, cv.width, cv.height)
+  ctx.imageSmoothingEnabled = false
+  ctx.drawImage(small, 0, 0, cv.width, cv.height)
+  bars = bars.filter(b => now - b.t < 900)
+  for (const b of bars) {
+    const k = (now - b.t) / 900, y = b.y + (cv.height) * k
+    const g = ctx.createLinearGradient(0, y - 60, 0, y + 60)
+    g.addColorStop(0, 'rgba(233,245,238,0)'); g.addColorStop(.5, `rgba(233,245,238,${.12 * (1 - k)})`); g.addColorStop(1, 'rgba(233,245,238,0)')
+    ctx.fillStyle = g; ctx.fillRect(0, y - 60, cv.width, 120)
+  }
+  flare *= .9
+  if (!Kit.reduced && (bars.length || flare > .02)) kick()
+  else if (!Kit.reduced) setTimeout(kick, 120) // idle static ticks slowly
+}
+size(); addEventListener('resize', size)
+const interfere = y => { if (Kit.reduced) return; bars.push({ y: y - innerHeight / 2, t: performance.now() }); flare = 1; kick() }
+
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'tv' + (spec.go ? ' go' : '') + (spec.about ? ' about' : '')
+  el.innerHTML = `<div class="scr">${spec.html}<div class="snow" style="background-image:${SNOW}"></div></div>`
+  if (spec.go) Kit.pressable(el, () => go(spec.go))
+  return el
+}
+const stage = Kit.Stage(document.getElementById('stage'), {
+  make,
+  layout: (k, W, H, ctx) => Kit.growLayout(k, W, H, { bento: ctx.home, cellH: 250, cellW: 360 }),
+  interval: 230,
+  enter: el => {
+    el.querySelector('.snow').animate([{ opacity: 1, backgroundPosition: '0 0' }, { opacity: .9, backgroundPosition: '37px 91px', offset: .3 }, { opacity: .6, backgroundPosition: '-53px 17px', offset: .6 }, { opacity: 0, backgroundPosition: '11px -40px' }], { duration: 520, easing: 'steps(8)' })
+    el.querySelector('.scr').animate([{ transform: 'scaleY(.02) scaleX(.6)', filter: 'brightness(4)' }, { transform: 'scaleY(1) scaleX(1)', filter: 'brightness(1.6)', offset: .35 }, { transform: 'translateX(-6px) skewX(4deg)', offset: .55 }, { transform: 'translateX(4px)', offset: .7 }, { transform: 'none', filter: 'brightness(1)' }], { duration: 520 })
+  },
+  exit: el => el.querySelector('.scr').animate([{ transform: 'none', filter: 'brightness(1)' }, { transform: 'scaleY(.02) scaleX(1)', filter: 'brightness(3)', offset: .6 }, { transform: 'scaleY(.01) scaleX(0)', filter: 'brightness(3)' }], { duration: 200, fill: 'forwards' }),
+  onSpawn: el => { const r = Kit.rectOf(el); interfere(r.top + r.height / 2) },
+})
+
+const pad = n => String(n).padStart(2, '0')
+const home = () => SECTIONS.map((s, i) => s.id === 'about'
+  ? { go: 'about', about: true, html: `<div class="ch"><span>CH 05</span><span>LIVE ●</span></div><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)} · ${esc(PERSON.status)}</p><span class="email">${esc(PERSON.email)}</span>` }
+  : { go: s.id, html: `<div class="ch"><span>CH ${pad(i + 1)}</span><span>${ITEMS[s.id].length} SHOWS</span></div><div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` })
+const section = id => ITEMS[id].map((it, i) => ({ html: `<div class="ch"><span>${pad(i + 1)}</span><span>${esc(it.meta.split(' · ')[0].toUpperCase())}</span></div><div><h2>${esc(it.title)}</h2><p>${esc(it.text)}</p>
+  ${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>` }))
+
+const backBtn = document.getElementById('back'), osd = document.getElementById('osd')
+const go = Kit.runApp(stage, {
+  home, section,
+  beforeClear: () => interfere(innerHeight / 2),
+  onView: t => {
+    backBtn.hidden = t === 'home'
+    const i = t === 'home' ? 0 : SECTIONS.findIndex(s => s.id === t) + 1
+    osd.textContent = `CH ${pad(i)} · ${t === 'home' ? 'HOME' : t === 'about' ? 'ABOUT' : SECTION[t].title.toUpperCase()}`
+  },
+  afterSpawn: t => (t === 'home' ? document.querySelector('.tv.go') : backBtn).focus({ preventScroll: true }),
+})
+backBtn.addEventListener('click', () => go('home'))
+go('home')
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Field Lines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: asymmetric two columns; profile on the left, sections as large rows on the right, each ending in a magnet the filings wrap around */
+:root {
+  --bg: #11100e; --ink: #ece4d6; --mute: #8f8676; --copper: #d38b4c; --hair: rgba(236,228,214,.14);
+  --serif: "Instrument Serif", Georgia, serif; --sans: "Figtree", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+main { position: relative; min-height: 100vh; max-width: 1240px; margin: 0 auto; display: grid; align-items: center; gap: 48px;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  padding-block: 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.who { display: flex; flex-direction: column; gap: 18px; cursor: pointer }
+.who:focus-visible { outline: 1px solid var(--copper); outline-offset: 8px }
+.mono { font: 400 12px var(--mono); color: var(--mute); letter-spacing: .04em }
+.who h1 { margin: 0; font: 400 clamp(56px, 7.4vw, 112px)/.9 var(--serif); letter-spacing: -.02em; text-wrap: balance }
+.who h1 em { color: var(--copper) }
+.who .role { font-size: 18px; margin: 0 }
+.who .email { font: 400 14px var(--mono); user-select: all }
+.chips { display: flex; gap: 8px; flex-wrap: wrap }
+.chip { font-size: 13px; padding: 4px 12px; border: 1px solid var(--hair); border-radius: 999px }
+.status { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--mute) }
+.pole { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--copper); background: var(--bg); box-shadow: 0 0 0 4px rgba(211,139,76,.12) }
+.rows { display: flex; flex-direction: column }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 22px 6px; border-top: 1px solid var(--hair); cursor: pointer; transition: padding .3s cubic-bezier(.2,.8,.2,1) }
+.row:last-child { border-bottom: 1px solid var(--hair) }
+.row:hover, .row:focus-visible { padding-left: 18px; outline: none }
+.row:hover .pole, .row:focus-visible .pole { background: var(--copper) }
+.row h2 { margin: 0; font: 400 clamp(36px, 4.4vw, 60px)/1 var(--serif) }
+.row:hover h2 { font-style: italic }
+.row p { margin: 6px 0 0; color: var(--mute) }
+dialog { width: min(600px, calc(100vw - 32px)); background: var(--bg); color: var(--ink); border: 1px solid var(--hair); padding: 34px 32px }
+dialog::backdrop { background: rgba(10,9,8,.7) }
+dialog[open] { animation: rise .4s cubic-bezier(.16,1,.3,1) }
+@keyframes rise { from { opacity: 0; transform: translateY(16px) } }
+dialog h3 { font: 400 52px/1 var(--serif); margin: 14px 0 10px }
+.close { float: right; background: none; border: 0; color: var(--copper); font: 400 12px var(--mono); cursor: pointer }
+.note { font: 400 12px var(--mono); color: var(--mute); border-top: 1px solid var(--hair); padding-top: 12px }
+@media (max-width: 860px) { main { grid-template-columns: 1fr; align-items: start } }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<main>
+  <section class="who" data-id="about">
+    <span class="mono">Portfolio · 2026</span>
+    <h1>Aakash <em>Senthil&shy;nathan</em></h1>
+    <p class="role" data-person="role"></p>
+    <span class="email" data-person="email" data-noopen></span>
+    <div class="chips" data-skills="chip"></div>
+    <span class="status"><span class="pole"></span><span data-person="status"></span></span>
+  </section>
+  <nav class="rows" aria-label="Sections">
+    <div class="row" data-id="projects"><div><span class="mono">/projects</span><h2>Projects</h2><p>My creative work</p></div><span class="pole"></span></div>
+    <div class="row" data-id="experience"><div><span class="mono">/experience</span><h2>Experience</h2><p>My professional journey</p></div><span class="pole"></span></div>
+    <div class="row" data-id="blog"><div><span class="mono">/blog</span><h2>Blog</h2><p>Thoughts &amp; insights</p></div><span class="pole"></span></div>
+    <div class="row" data-id="current"><div><span class="mono">/now</span><h2>Current Work</h2><p>What I'm building now</p></div><span class="pole"></span></div>
+  </nav>
+</main>
+<dialog id="panel" aria-labelledby="panel-title">
+  <button class="close" data-close>close ×</button>
+  <span class="mono" data-slot="path"></span>
+  <h3 id="panel-title" data-slot="title"></h3>
+  <p data-slot="kicker"></p>
+  <p data-slot="body"></p>
+  <p class="note">Placeholder content. This section is still being built.</p>
+</dialog>
+<script src="shared.js"></script>
+<script>
+// Each pole switches on when its row lands; filings rotate to circle the active poles.
+const poles = [...document.querySelectorAll('.pole')].map((el, i) => ({ el, sign: i % 2 ? -1 : 1, on: Kit.reduced ? -1e9 : Infinity }))
+let settleUntil = Infinity
+
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 18, speed: 650, band: 80, life: 1600, push: 8, mouseRadius: 160, mousePush: 6,
+  ambient: now => now < settleUntil,
+  render(ctx, dots, W, H, now, mouse) {
+    const P = []
+    for (const p of poles) {
+      const k = Math.max(0, Math.min(1, (now - p.on) / 700))
+      if (k > 0) { const c = Kit.centerOf(p.el); P.push({ x: c.x, y: c.y, s: k * k * (3 - 2 * k) * p.sign }) }
+    }
+    if (now - mouse.t < 900) P.push({ x: mouse.x, y: mouse.y, s: 1.5 * (1 - (now - mouse.t) / 900) })
+    ctx.lineCap = 'round'
+    for (const d of dots) {
+      let fx = 0.004, fy = 0.0025 // faint diagonal drift so the field is never blank
+      for (const p of P) {
+        const vx = d.bx - p.x, vy = d.by - p.y
+        const r2 = vx * vx + vy * vy + 400
+        fx += (-vy / r2) * p.s * 60
+        fy += (vx / r2) * p.s * 60
+      }
+      const len = Math.hypot(fx, fy) || 1
+      const L = 3.2 + d.e * 5
+      const ux = fx / len * L, uy = fy / len * L
+      ctx.globalAlpha = Math.min(1, 0.14 + Math.min(1, len * 6) * 0.22 + d.e * 0.7)
+      ctx.strokeStyle = d.e > .2 ? '#d38b4c' : '#ece4d6'
+      ctx.lineWidth = 1 + d.e
+      ctx.beginPath(); ctx.moveTo(d.x - ux, d.y - uy); ctx.lineTo(d.x + ux, d.y + uy); ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+  },
+})
+Kit.fillPerson()
+Kit.wirePanels(field)
+
+const who = document.querySelector('.who')
+const rows = [...document.querySelectorAll('.row')]
+Kit.assemble([who, ...rows], (el, i) => i === 0
+  ? { duration: 800, keyframes: [{ opacity: 0, transform: 'translateY(18px)' }, { opacity: 1, transform: 'none' }] }
+  : { delay: 200 + i * 110, duration: 700, keyframes: [{ opacity: 0, transform: 'translateX(60px)' }, { opacity: 1, transform: 'none' }] },
+  (el, instant) => {
+    if (instant) return
+    const p = poles.find(p => el.contains(p.el))
+    if (p) { p.on = performance.now(); const c = Kit.centerOf(p.el); field.ripple(c.x, c.y, .8) }
+    settleUntil = performance.now() + 900
+    field.kick()
+  })
+</script>
+</body>
+</html>

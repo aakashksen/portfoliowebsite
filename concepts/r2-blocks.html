@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Block Drop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: a falling-block game board. Blocks drop in step by step; opening an entry line-clears the board into pixels and drops that entry's blocks */
+:root {
+  --night: #0a0b1e; --cell: #1b1e3d; --fg: #eef0ff; --mute: #8d92c4; --dark: #0a0b1e;
+  --cyan: #3ee6f0; --yellow: #ffd53e; --pink: #ff4fd8; --green: #5cf27a; --orange: #ff9a3c; --purple: #9b6bff;
+  --pixel: "Silkscreen", "Courier New", monospace; --mono: "Space Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--night); color: var(--fg); font: 14px/1.5 var(--mono) }
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none }
+#fx.front { z-index: 5 }
+.hud { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 52px; background: var(--night); border-bottom: 2px solid var(--cell);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font: 700 13px var(--pixel); letter-spacing: .04em }
+.hud .lvl { color: var(--cyan) }
+.hud .score { font-variant-numeric: tabular-nums; color: var(--yellow) }
+.back { font: 700 13px var(--pixel); background: var(--pink); color: var(--dark); border: 0; padding: 8px 12px; cursor: pointer; box-shadow: inset -3px -3px 0 rgba(0,0,0,.3), inset 3px 3px 0 rgba(255,255,255,.4) }
+.back[hidden] { display: none }
+.back:focus-visible, .blk:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px }
+main { position: relative; display: grid; place-items: center; min-height: calc(100vh - 52px);
+  padding-block: 28px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#board { width: 100%; max-width: 1100px; display: grid; gap: 12px }
+#board.home { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(220px, auto)); grid-template-areas: "projects about experience" "blog about current" }
+#board.section { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) }
+.blk { --c: var(--cyan); position: relative; background-color: var(--c); color: var(--dark); padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-height: 180px;
+  background-image: linear-gradient(rgba(0,0,0,.07) 2px, transparent 2px), linear-gradient(90deg, rgba(0,0,0,.07) 2px, transparent 2px); background-size: 24px 24px;
+  box-shadow: inset -6px -6px 0 rgba(0,0,0,.28), inset 6px 6px 0 rgba(255,255,255,.45); transition: translate .12s steps(2) }
+.blk.go { cursor: pointer }
+.blk.go:hover { translate: 0 -6px }
+.blk .tag { font: 700 12px var(--mono); align-self: flex-start; background: var(--dark); color: var(--c); padding: 2px 8px }
+.blk h2 { margin: 0; font: 700 clamp(22px, 2.6vw, 34px)/1.05 var(--pixel); text-transform: uppercase; overflow-wrap: break-word }
+#board.section .blk h2 { font-size: clamp(16px, 1.6vw, 21px); line-height: 1.2 }
+.blk p { margin: 6px 0 0; font-weight: 700; font-size: 14px }
+.blk .go-hint { font: 700 12px var(--pixel) }
+.about { grid-area: about; justify-content: center; gap: 14px }
+.about h1 { margin: 0; font: 700 clamp(24px, 2.4vw, 34px)/1.05 var(--pixel); text-transform: uppercase; overflow-wrap: break-word }
+.about .email { background: var(--dark); color: var(--c); padding: 4px 8px; align-self: flex-start; font-weight: 700; user-select: all; max-width: 100%; overflow-wrap: anywhere }
+.head { grid-column: 1 / -1; min-height: 0; background-color: var(--cell); color: var(--fg); flex-direction: row; align-items: center; flex-wrap: wrap; box-shadow: inset -6px -6px 0 rgba(0,0,0,.35), inset 6px 6px 0 rgba(255,255,255,.08) }
+.head h2 { color: var(--c) }
+.head span { margin-left: auto; font: 700 12px var(--pixel); color: var(--mute) }
+.bar { height: 14px; background: var(--dark); padding: 3px; margin-top: 12px } .bar span { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--c) 0 10px, transparent 10px 12px) }
+#pop { position: fixed; left: 50%; top: 45%; z-index: 6; translate: -50% -50%; font: 700 clamp(32px, 6vw, 72px) var(--pixel); color: var(--yellow); text-shadow: 4px 4px 0 var(--pink); pointer-events: none; opacity: 0; white-space: nowrap }
+@media (max-width: 820px) {
+  #board.home { grid-template-columns: 1fr; grid-template-rows: none; grid-template-areas: "about" "projects" "experience" "blog" "current" }
+  .hud .lvl { display: none }
+}
+</style>
+</head>
+<body>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="hud">
+  <button class="back" id="back" type="button" hidden>◄ Back</button>
+  <span class="lvl" id="lvl">Level 1 · Home</span>
+  <span class="score">Score <span id="score">000000</span></span>
+</div>
+<main><div id="board" class="home"></div></main>
+<div id="pop" aria-hidden="true">Line clear!</div>
+<script src="kit2.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const COLORS = ['cyan', 'yellow', 'pink', 'green', 'orange', 'purple']
+const hex = n => getComputedStyle(document.documentElement).getPropertyValue('--' + n).trim()
+const board = document.getElementById('board'), backBtn = document.getElementById('back'), lvl = document.getElementById('lvl')
+
+// Canvas: dim pixel grid that lights up in waves, plus pixel debris
+const cv = document.getElementById('fx'), ctx = cv.getContext('2d')
+let W = 0, H = 0, parts = [], waves = [], raf = 0, last = 0
+function resize() { const d = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); kick() }
+function kick() { if (!raf) raf = requestAnimationFrame(loop) }
+function loop(now) {
+  raf = 0
+  const dt = Math.min(32, now - (last || now)) / 16.7; last = now
+  waves = waves.filter(w => now - w.t < 1100)
+  ctx.clearRect(0, 0, W, H)
+  const S = 24
+  for (let y = S / 2; y < H; y += S) for (let x = S / 2; x < W; x += S) {
+    let e = 0, c = null
+    for (const w of waves) {
+      const age = (now - w.t) / 1000, b = 1 - Math.abs(Math.hypot(x - w.x, y - w.y) - age * 520) / 50
+      if (b > 0) { const k = b * (1 - age / 1.1); if (k > e) { e = k; c = w.c } }
+    }
+    if (e > .05) { ctx.fillStyle = c; ctx.globalAlpha = e; const s = 3 + e * 8; ctx.fillRect(x - s / 2, y - s / 2, s, s) }
+    else { ctx.fillStyle = '#1b1e3d'; ctx.globalAlpha = 1; ctx.fillRect(x - 1.5, y - 1.5, 3, 3) }
+  }
+  parts = parts.filter(p => p.y < H + 40)
+  for (const p of parts) {
+    p.vy += 0.45 * dt; p.x += p.vx * dt; p.y += p.vy * dt
+    ctx.globalAlpha = 1; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.s, p.s)
+  }
+  ctx.globalAlpha = 1
+  if (waves.length || parts.length) kick(); else { last = 0; cv.classList.remove('front') }
+}
+addEventListener('resize', resize); resize()
+const wave = (x, y, c) => { if (!Kit.reduced) { waves.push({ x, y, c, t: performance.now() }); kick() } }
+function burst(el, cell = 14) {
+  if (Kit.reduced) return
+  const r = Kit.rectOf(el), c = getComputedStyle(el).backgroundColor
+  for (let y = r.top; y < r.bottom; y += cell) for (let x = r.left; x < r.right; x += cell)
+    parts.push({ x, y, s: cell - 2, c, vx: (x - (r.left + r.width / 2)) / r.width * 8 + (Math.random() - .5) * 3, vy: -Math.random() * 9 - 2 })
+  cv.classList.add('front'); kick()
+}
+function puff(el) {
+  if (Kit.reduced) return
+  const r = Kit.rectOf(el), c = getComputedStyle(el).backgroundColor
+  for (let i = 0; i < 14; i++) parts.push({ x: r.left + Math.random() * r.width, y: r.bottom - 4, s: 5, c, vx: (Math.random() - .5) * 6, vy: -Math.random() * 5 - 1 })
+  kick()
+}
+
+let score = 0
+const scoreEl = document.getElementById('score')
+const addScore = n => { score += n; scoreEl.textContent = String(score).padStart(6, '0') }
+
+const homeHTML = () => SECTIONS.map((s, i) => s.id === 'about'
+  ? `<article class="blk go about" data-go="about" style="--c:var(--purple)"><span class="tag">player 1</span><h1>${esc(PERSON.name)}</h1>
+      <p>${esc(PERSON.role)}</p><span class="email">${esc(PERSON.email)}</span><span class="go-hint">● ${esc(PERSON.status)}</span></article>`
+  : `<article class="blk go" data-go="${s.id}" style="grid-area:${s.id};--c:var(--${COLORS[i]})"><span class="tag">${s.path}</span>
+      <div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div><span class="go-hint">▶ ${ITEMS[s.id].length} blocks</span></article>`).join('')
+const sectionHTML = id => `<header class="blk head" style="--c:var(--yellow)"><h2>${esc(id === 'about' ? 'About' : SECTION[id].title)}</h2><span>${ITEMS[id].length} blocks · sample content</span></header>` +
+  ITEMS[id].map((it, i) => `<article class="blk" style="--c:var(--${COLORS[(i + 1) % COLORS.length]})"><span class="tag">${esc(it.meta)}</span>
+    <div><h2>${esc(it.title)}</h2><p>${esc(it.text)}</p>${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div></article>`).join('')
+
+// Stepped fall from above the screen, a squash on landing
+function drop() {
+  return Kit.animateAll([...board.children], (el, i, r) => ({
+    delay: i * 110, duration: 560, easing: 'linear',
+    keyframes: [
+      { transform: `translateY(${-(r.bottom + 60)}px)`, easing: 'steps(8, end)' },
+      { transform: 'translateY(0)', offset: .8 },
+      { transform: 'translateY(4px) scaleY(.94)', offset: .9 },
+      { transform: 'none' }],
+  }), (el, i, instant) => {
+    if (instant) return
+    const r = Kit.rectOf(el)
+    wave(r.left + r.width / 2, r.bottom, getComputedStyle(el).backgroundColor); puff(el); addScore(100)
+  })
+}
+async function lineClear() {
+  const blocks = [...board.children]
+  await Kit.animateAll(blocks, () => ({ duration: 300, easing: 'steps(4, end)', fill: 'forwards',
+    keyframes: [{ filter: 'brightness(1)' }, { filter: 'brightness(3) saturate(0)' }, { filter: 'brightness(1)' }, { filter: 'brightness(3) saturate(0)' }] }))
+  blocks.forEach(b => burst(b))
+  board.innerHTML = ''
+  addScore(1000)
+  if (!Kit.reduced) document.getElementById('pop').animate([
+    { opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'scale(1.1)', offset: .2 }, { opacity: 1, transform: 'scale(1)', offset: .7 }, { opacity: 0, transform: 'scale(1)' }],
+    { duration: 700, easing: 'steps(10, end)' })
+  await Kit.wait(380)
+}
+
+let view = null, busy = false
+async function go(target) {
+  if (busy || target === view) return
+  busy = true
+  if (view) await lineClear()
+  view = target
+  board.className = target === 'home' ? 'home' : 'section'
+  board.innerHTML = target === 'home' ? homeHTML() : sectionHTML(target)
+  board.querySelectorAll('[data-go]').forEach(el => Kit.pressable(el, () => go(el.dataset.go)))
+  backBtn.hidden = target === 'home'
+  lvl.textContent = target === 'home' ? 'Level 1 · Home' : `Level 2 · ${target === 'about' ? 'About' : SECTION[target].title}`
+  scrollTo(0, 0)
+  await drop()
+  ;(target === 'home' ? board.querySelector('[data-go]') : backBtn).focus({ preventScroll: true })
+  busy = false
+}
+backBtn.addEventListener('click', () => go('home'))
+Kit.onBack(() => go('home'))
+go('home')
+</script>
+</body>
+</html>

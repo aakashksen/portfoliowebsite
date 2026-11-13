@@ -1,0 +1,362 @@
+<title>Aakash Senthilnathan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: glass bento on a dot field. Intro: four corner blocks pop in as a tight square, then expand as About spawns in the middle.
+   Experience / Projects / About burst into rich entry cards; every card zooms into its full write-up */
+:root {
+  --bg: #050507; --glass: rgba(255,255,255,.055); --glass-hi: rgba(255,255,255,.09); --panel: #0c0d12;
+  --line: rgba(255,255,255,.12); --line-hi: rgba(255,255,255,.3);
+  --fg: #f2f3f7; --soft: #c9cbd6; --muted: #9597a6; --accent: #8fb0ff; --ok: #5be39a; --warn: #ffc56b;
+  --sans: "Geist", ui-sans-serif, system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+  --spring: cubic-bezier(.2,1.2,.35,1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+header { position: relative; z-index: 3; display: flex; align-items: center; gap: 14px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.crumb { font: 500 13px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis } .crumb b { color: var(--fg); font-weight: 500 }
+.back { flex: none; font: 500 13px var(--mono); color: var(--fg); background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer }
+.back[hidden] { display: none }
+.back:hover { background: rgba(255,255,255,.12) }
+.back:focus-visible, .card:focus-visible, .x:focus-visible, a:focus-visible, .copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }
+main { position: relative; padding-block: 8px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#stage { position: relative; height: calc(100vh - 64px - 48px); min-height: 560px; transition: opacity .3s, filter .3s, scale .3s }
+#stage.dim { opacity: .25; filter: blur(2px); scale: .985 }
+.card { position: absolute; background: var(--glass); border: 1px solid var(--line); border-radius: 22px; padding: 22px 24px; overflow: hidden;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); display: flex; flex-direction: column; justify-content: space-between; gap: 12px; cursor: pointer;
+  transition: left .55s var(--spring), top .55s var(--spring), width .55s var(--spring), height .55s var(--spring), border-color .2s, background .2s, border-radius .4s }
+.card > * { transition: opacity .3s }
+.card.compact { border-radius: 14px }
+.card.compact > * { opacity: 0 }
+.card:hover { border-color: var(--line-hi); background: var(--glass-hi) }
+.path { font: 500 12px/1 var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 12px }
+.card:hover .arrow { color: var(--fg) }
+h2 { margin: 0 0 4px; font-size: clamp(19px, 2vw, 26px); font-weight: 600; letter-spacing: -.02em; text-wrap: balance }
+.card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5 }
+.live { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); flex: none; animation: pulse 2s ease-in-out infinite }
+@keyframes pulse { 50% { box-shadow: 0 0 2px var(--ok) } }
+/* Home corners */
+.nowlist { display: flex; flex-direction: column; gap: 8px }
+.nowlist div { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--soft); min-width: 0 }
+.nowlist b { color: var(--fg); font-weight: 600; white-space: nowrap }
+.nowlist span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted) }
+.wins { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.wins div { border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0 }
+.wins b { font: 600 17px var(--sans); letter-spacing: -.02em }
+.wins span { font: 500 11px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { font: 500 11.5px var(--mono); padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--soft) }
+.hire { background: linear-gradient(150deg, rgba(91,227,154,.14), rgba(143,176,255,.08) 55%, var(--glass)); border-color: rgba(91,227,154,.35) }
+.hire:hover { border-color: rgba(91,227,154,.7) }
+.hire h2 { font-size: clamp(22px, 2.3vw, 30px); line-height: 1.08 }
+.hire .cta { font: 500 13px var(--mono); color: var(--ok) }
+.about { justify-content: center; align-items: center; text-align: center; gap: 12px }
+.avatar { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid rgba(143,176,255,.5); box-shadow: 0 0 0 6px rgba(143,176,255,.08) }
+.about h1 { margin: 0; font-size: clamp(24px, 2.4vw, 30px); font-weight: 650; letter-spacing: -.025em; text-wrap: balance }
+.seek { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--ok); border: 1px solid rgba(91,227,154,.35); background: rgba(91,227,154,.08); border-radius: 999px; padding: 5px 12px }
+.email { font: 500 13px var(--mono); color: var(--accent); user-select: all; overflow-wrap: anywhere }
+.links { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center }
+.links a { font: 500 12px var(--mono); color: var(--fg); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px }
+.links a:hover { border-color: var(--line-hi); background: rgba(255,255,255,.06) }
+/* Entry cards */
+.entry { justify-content: flex-start; gap: 14px }
+.etop { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 500 12px var(--mono); color: var(--muted) }
+.now { display: inline-flex; align-items: center; gap: 7px; color: var(--ok) }
+.entry h2 { margin: 0 }
+.entry .role { font-size: 13.5px; color: var(--accent); margin-top: 3px; line-height: 1.35 }
+.metric { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 14px; background: rgba(143,176,255,.07); border: 1px solid rgba(143,176,255,.18) }
+.metric b { font-size: clamp(22px, 2.2vw, 28px); font-weight: 650; letter-spacing: -.03em; line-height: 1.05 }
+.metric span { font-size: 12.5px; color: var(--soft); line-height: 1.35 }
+.pts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px }
+.pts li { position: relative; padding-left: 16px; font-size: 13.5px; line-height: 1.45; color: var(--soft) }
+.pts li::before { content: ""; position: absolute; left: 2px; top: .6em; width: 6px; height: 1.5px; background: var(--accent) }
+.entry .chips { margin-top: 4px }
+.entry .more { font: 500 11.5px var(--mono); color: var(--muted) }
+/* Zoom module */
+.zoom { position: fixed; z-index: 10; background: var(--panel); border: 1px solid var(--line-hi); border-radius: 26px; overflow: hidden; transform-origin: 0 0; box-shadow: 0 40px 120px -30px rgba(0,0,0,.9) }
+.zoom .short { position: absolute; inset: 0; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; pointer-events: none }
+.zoom .long { position: absolute; inset: 0; overflow-y: auto; padding: 28px clamp(20px, 4vw, 48px) 40px }
+.x { position: absolute; z-index: 2; top: 16px; right: 16px; font: 500 12px var(--mono); color: var(--fg); background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer }
+.long .kick { font: 500 12px var(--mono); color: var(--accent); text-transform: uppercase; letter-spacing: .06em; padding-right: 90px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center }
+.long h3 { margin: 10px 0 4px; font-size: clamp(30px, 4.4vw, 54px); font-weight: 650; letter-spacing: -.035em; line-height: 1.02; text-wrap: balance }
+.long .sub { color: var(--accent); font-size: 17px; margin: 0 0 22px }
+.long .lede { color: var(--soft); font-size: 17px; max-width: 64ch; margin: 0 0 24px; line-height: 1.6 }
+.bigmetric { display: inline-flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0 0 22px; padding: 16px 20px; border-radius: 18px; background: rgba(143,176,255,.07); border: 1px solid rgba(143,176,255,.2) }
+.bigmetric b { font-size: clamp(32px, 4vw, 48px); font-weight: 650; letter-spacing: -.04em; line-height: 1 }
+.bigmetric span { color: var(--soft); font-size: 15px }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px }
+.box { border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; background: rgba(255,255,255,.03); display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.box h4 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em }
+.box p { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0 }
+.box .num { font-size: 30px; font-weight: 650; letter-spacing: -.03em; line-height: 1 }
+.box .where { font: 500 12px var(--mono); color: var(--accent) }
+.hl { max-width: 80ch; margin-bottom: 18px }
+.hl ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 10px }
+.hl li { font-size: 15px; line-height: 1.6; color: var(--soft) }
+.contact-big { font: 500 clamp(17px, 2.4vw, 24px) var(--mono); color: var(--accent); user-select: all; overflow-wrap: anywhere }
+.copy { align-self: flex-start; font: 500 12px var(--mono); color: var(--fg); background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer }
+.section-title { font: 500 12px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 28px 0 12px }
+@media (max-width: 700px) { #stage { height: auto; min-height: 0 } .avatar { width: 84px; height: 84px } }
+@media (prefers-reduced-motion: reduce) { .live { animation: none } }
+</style>
+
+<canvas id="field" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>← Back</button>
+  <span class="crumb" id="crumb"><b>~</b></span>
+</header>
+<main><div id="stage"></div></main>
+
+<script src="kit2.js"></script>
+<script src="kit3.js"></script>
+<script src="content.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, SKILLS, esc } = Kit
+
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 16, speed: 700, band: 110, life: 1900, push: 16,
+  render(ctx, dots) {
+    ctx.fillStyle = '#ffffff'
+    for (const d of dots) { const s = 1.2 + d.e * 1.8; ctx.globalAlpha = 0.13 + d.e * 0.8; ctx.fillRect(d.x - s / 2, d.y - s / 2, s, s) }
+    ctx.globalAlpha = 1
+  },
+})
+const clickRipple = el => { const c = Kit.centerOf(el); field.ripple(c.x, c.y, 1.4) }
+const softRipple = (P, s = .6) => field.ripple(P.x, P.y, s)
+
+// ---------- Layouts ----------
+const stageEl = document.getElementById('stage')
+let cards = [], view = null, busy = false
+const GAP = 16
+const viewH = () => Math.min(stageEl.clientHeight, innerHeight - 112)
+const narrow = () => innerWidth <= 700
+function compactSquare() {
+  const W = stageEl.clientWidth, H = viewH()
+  const s = Math.min(150, (W - 10) / 2), g = 10, x0 = (W - (2 * s + g)) / 2, y0 = (H - (2 * s + g)) / 2
+  return [0, 1, 2, 3].map(i => ({ x: x0 + (i % 2) * (s + g), y: y0 + Math.floor(i / 2) * (s + g), w: s, h: s }))
+}
+function homeLayout(k) {
+  const R = Kit.growLayout(k, stageEl.clientWidth, viewH(), { bento: k === 5, cellH: 270, cellW: 350, narrowH: 220 })
+  if (!(k === 5 && narrow())) return R
+  // Phones: About first, the four corners stacked under it
+  const aboutH = 360, out = R.slice(0, 4).map(r => ({ ...r, y: r.y + aboutH + GAP }))
+  return [...out, { ...R[0], y: 0, h: aboutH }]
+}
+// Entry grids: as many columns as fit; each row is as tall as its tallest card's content; last row centred
+function entryLayout(els) {
+  const k = els.length, W = stageEl.clientWidth, cols = Math.min(k, W >= 1150 ? 3 : W >= 720 ? 2 : 1)
+  const cw = Math.min(390, (W - GAP * (cols - 1)) / cols)
+  const hs = els.map(el => {
+    const t = el.style.transition, w = el.style.width, h = el.style.height
+    el.style.transition = 'none'; el.style.width = cw + 'px'; el.style.height = 'auto'
+    const n = el.offsetHeight
+    el.style.width = w; el.style.height = h; el.style.transition = t
+    return n
+  })
+  const rows = Math.ceil(k / cols), rowH = []
+  for (let r = 0; r < rows; r++) rowH.push(Math.max(260, ...hs.slice(r * cols, r * cols + cols)))
+  const totalH = rowH.reduce((a, b) => a + b, 0) + (rows - 1) * GAP
+  let y = Math.max(0, (viewH() - totalH) / 2)
+  const out = []
+  for (let r = 0; r < rows; r++) {
+    const inRow = Math.min(cols, k - r * cols), rowW = inRow * cw + (inRow - 1) * GAP
+    for (let c = 0; c < inRow; c++) out.push({ x: (W - rowW) / 2 + c * (cw + GAP), y, w: cw, h: rowH[r] })
+    y += rowH[r] + GAP
+  }
+  return out
+}
+const layoutFor = () => view === 'home' ? homeLayout(cards.length) : entryLayout(cards)
+function place(el, r, instant) {
+  if (instant) el.style.transition = 'none'
+  Object.assign(el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' })
+  if (instant) { el.offsetWidth; el.style.transition = '' }
+}
+function fit(R) { stageEl.style.minHeight = Math.max(...R.map(r => r.y + r.h)) + 'px' }
+addEventListener('resize', () => { const R = layoutFor(); cards.forEach((c, i) => place(c, R[i], true)); fit(R) })
+
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'card ' + (spec.cls || '')
+  el.innerHTML = spec.html
+  el.spec = spec
+  Kit.pressable(el, e => {
+    if (e && e.target && e.target.closest && e.target.closest('a')) return
+    clickRipple(el)
+    spec.zoom ? openZoom(el) : go(spec.go, el)
+  })
+  el.querySelectorAll('a').forEach(a => a.addEventListener('keydown', e => e.stopPropagation()))
+  return el
+}
+async function addGroup(specs, rectsFor, P, stagger = 45, extra) {
+  const fresh = specs.map(make)
+  if (extra) fresh.forEach(extra)
+  fresh.forEach(el => stageEl.append(el))
+  cards.push(...fresh)
+  const rects = typeof rectsFor === 'function' ? rectsFor(cards) : rectsFor
+  cards.forEach((c, i) => place(c, rects[i], fresh.includes(c)))
+  fit(rects)
+  if (Kit.reduced) return fresh
+  await Promise.all(fresh.map((el, i) => {
+    const r = el.getBoundingClientRect()
+    return el.animate([{ transform: `translate(${P.x - (r.left + r.width / 2)}px,${P.y - (r.top + r.height / 2)}px) scale(.25)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
+      { duration: 500, delay: i * stagger, easing: 'cubic-bezier(.2,1.15,.35,1)', fill: 'backwards' }).finished
+  }))
+  return fresh
+}
+async function clearAll(P) {
+  const old = cards; cards = []
+  if (!Kit.reduced) await Promise.all(old.map((el, i) => {
+    const r = el.getBoundingClientRect()
+    return el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${P.x - (r.left + r.width / 2)}px,${P.y - (r.top + r.height / 2)}px) scale(.25)`, opacity: 0 }],
+      { duration: 260, delay: i * 15, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).finished
+  }))
+  old.forEach(el => el.remove())
+}
+
+// ---------- Cards ----------
+const linksHTML = () => `<div class="links">${PERSON.links.map(l => `<a href="${l.url}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join('')}</div>`
+const chipsHTML = list => `<div class="chips">${list.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div>`
+const current = ITEMS.experience.filter(e => e.now)
+function homeCard(id) {
+  const s = SECTION[id]
+  if (id === 'about') return { go: 'about', cls: 'about', html: `<img class="avatar" src="${PERSON.photo}" alt="Portrait of ${esc(PERSON.name)}">
+    <div><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)}</p></div><span class="seek"><span class="live"></span>${esc(PERSON.seeking)}</span>
+    <span class="email">${esc(PERSON.email)}</span>${linksHTML()}` }
+  if (id === 'experience') return { go: id, html: `<div class="path"><span>${s.path}</span><span class="arrow">↗ ${ITEMS.experience.length} roles</span></div>
+    <div class="nowlist">${current.map(e => `<div><span class="live"></span><b>${esc(e.title)}</b><span>${esc(e.role)}</span></div>`).join('')}</div>
+    <div><h2>${esc(s.title)}</h2><p>${current.length} roles right now · ${esc(s.kicker)}</p></div>` }
+  if (id === 'projects') return { go: id, html: `<div class="path"><span>${s.path}</span><span class="arrow">↗ ${ITEMS.projects.length}</span></div>
+    <div class="wins">${[['26K+', 'Hephaestus'], ['98.5%', 'SPROUT'], ['1st', 'CubeSat']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
+    <div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` }
+  if (id === 'skills') return { zoom: 'skills', html: `<div class="path"><span>${s.path}</span><span class="arrow">⤢</span></div>
+    ${chipsHTML(['PyTorch', 'LLMs / RAG', 'vLLM', 'FastAPI', 'Kubernetes', 'PostgreSQL', 'Docker', 'GCP'])}
+    <div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` }
+  return { zoom: 'hire', cls: 'hire', html: `<div class="path"><span>${s.path}</span><span class="arrow">⤢</span></div>
+    <div><h2>Looking for ML &amp; SWE internships</h2><p>AI infrastructure, ML engineering, backend</p></div><span class="cta">See why, and get in touch →</span>` }
+}
+const entryCard = it => ({ zoom: 'item', item: it, cls: 'entry', html: `<div class="etop"><span>${esc(it.dates)}</span>${it.now ? '<span class="now"><span class="live"></span>Now</span>' : '<span class="arrow">⤢</span>'}</div>
+  <div><h2>${esc(it.title)}</h2><div class="role">${esc(it.role)}</div></div>
+  <div class="metric"><b>${esc(it.metric[0])}</b><span${it.contact ? ' class="email"' : ''}>${esc(it.metric[1])}</span></div>
+  ${it.points.length ? `<ul class="pts">${it.points.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : it.contact ? linksHTML() : ''}
+  ${it.tags.length ? chipsHTML(it.tags) : ''}` })
+const CORNERS = ['experience', 'projects', 'skills', 'hire']
+
+// ---------- Navigation ----------
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+let zoomState = null
+function chrome() {
+  backBtn.hidden = view === 'home' && !zoomState
+  const where = view === 'home' ? '' : ` / <b>${esc(SECTION[view].path.slice(1))}</b>`
+  crumb.innerHTML = `<b>~</b>${where}${zoomState ? ` / <b>${esc(zoomState.title)}</b>` : ''}`
+}
+const centerOfStage = () => { const r = stageEl.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + Math.min(r.height, innerHeight - r.top) / 2 } }
+
+async function intro() {
+  busy = true; view = 'home'; chrome()
+  const P = centerOfStage()
+  softRipple(P, .8)
+  const four = await addGroup(CORNERS.map(homeCard), narrow() ? homeLayout(4) : compactSquare(), P, 30, el => { if (!narrow()) el.classList.add('compact') })
+  if (!narrow() && !Kit.reduced) await Kit.wait(120)
+  four.forEach(el => el.classList.remove('compact'))
+  softRipple(P, 1.1)
+  await addGroup([homeCard('about')], homeLayout(5), P)
+  busy = false
+}
+async function go(target, fromEl) {
+  if (busy || target === view) return
+  busy = true
+  const P = fromEl ? Kit.centerOf(fromEl) : centerOfStage()
+  await clearAll(P)
+  view = target; chrome(); scrollTo(0, 0)
+  if (target === 'home') await addGroup([...CORNERS.map(homeCard), homeCard('about')], homeLayout(5), P, 25)
+  else await addGroup(ITEMS[target].map(entryCard), entryLayout, P, 45)
+  softRipple(P, .5)
+  ;(target === 'home' ? stageEl.querySelector('.card') : backBtn).focus({ preventScroll: true })
+  busy = false
+}
+
+// ---------- Zoom module ----------
+const contactBox = () => `<div class="box"><span class="contact-big" id="mail">${esc(PERSON.email)}</span><button class="copy" type="button" id="copy">Copy email</button>${linksHTML()}</div>`
+function longHTML(kind, it) {
+  if (kind === 'hire') {
+    const proof = [
+      ['26,000+', 'students on the LLM platform I architected', 'UCSB ITS · ML infrastructure'],
+      ['98.5%', 'accuracy on a 38-class plant-disease CNN', 'SPROUT · ML modelling'],
+      ['−86%', 'API latency after my FastAPI + PostgreSQL rebuild', 'HopeKCC · backend SWE'],
+      ['2 wks → 3 hrs', 'dashboard migration with an MCP agent I built', 'Kaiser Permanente · agentic AI'],
+    ]
+    return `<div class="kick"><span class="now"><span class="live"></span>Open to work</span><span>/hire</span></div>
+      <h3>Looking for ML &amp; SWE internships</h3>
+      <p class="lede">I’m studying Computer Science and Statistics &amp; Data Science at UCSB (graduating 2028) and I’m looking for machine learning and software engineering internships, especially in AI infrastructure, ML engineering and backend systems. Here is what I have already shipped.</p>
+      <div class="grid2">${proof.map(([n, l, w]) => `<div class="box"><span class="num">${esc(n)}</span><p>${esc(l)}</p><span class="where">${esc(w)}</span></div>`).join('')}</div>
+      <div class="section-title">Get in touch</div>${contactBox()}`
+  }
+  if (kind === 'skills') return `<div class="kick">/skills</div><h3>Skills</h3><p class="lede">The languages, frameworks and infrastructure I work with, grouped by what I use them for.</p>
+    <div class="grid2">${SKILLS.map(g => `<div class="box"><h4>${esc(g.group)}</h4>${chipsHTML(g.items)}</div>`).join('')}</div>`
+  if (it.contact) return `<div class="kick">/about · contact</div><h3>Get in touch</h3><p class="lede">Email is the best way to reach me. I’m also on LinkedIn and GitHub.</p>${contactBox()}`
+  return `<div class="kick"><span>${esc(it.dates)}</span>${it.now ? '<span class="now"><span class="live"></span>Now</span>' : ''}</div>
+    <h3>${esc(it.title)}</h3><p class="sub">${esc(it.role)}</p>
+    <div class="bigmetric"><b>${esc(it.metric[0])}</b><span>${esc(it.metric[1])}</span></div>
+    <div class="box hl"><h4>What I did</h4><ul>${it.long.map(b => `<li>${esc(b)}</li>`).join('')}</ul></div>${chipsHTML(it.tags)}`
+}
+function zoomTarget() {
+  const pad = innerWidth < 700 ? 8 : 24, top = 64
+  return { x: pad + Math.max(0, (innerWidth - 2 * pad - 1040) / 2), y: top, w: Math.min(1040, innerWidth - 2 * pad), h: innerHeight - top - pad }
+}
+async function openZoom(card) {
+  if (busy || zoomState) return
+  busy = true
+  const kind = card.spec.zoom, it = card.spec.item
+  const title = kind === 'item' ? it.title : SECTION[kind].path.slice(1)
+  const from = card.getBoundingClientRect(), to = zoomTarget()
+  const z = document.createElement('section')
+  z.className = 'zoom'
+  z.setAttribute('role', 'dialog'); z.setAttribute('aria-modal', 'true'); z.setAttribute('aria-label', title)
+  z.innerHTML = `<div class="short">${card.innerHTML}</div><div class="long">${longHTML(kind, it)}</div><button class="x" type="button">Close ✕</button>`
+  Object.assign(z.style, { left: to.x + 'px', top: to.y + 'px', width: to.w + 'px', height: to.h + 'px' })
+  document.body.append(z)
+  zoomState = { el: z, card, title: title.toLowerCase() }
+  z.querySelector('.x').addEventListener('click', closeZoom)
+  const copy = z.querySelector('#copy')
+  if (copy) copy.addEventListener('click', () => {
+    navigator.clipboard.writeText(PERSON.email).then(() => { copy.textContent = 'Copied' }, () => { getSelection().selectAllChildren(z.querySelector('#mail')); copy.textContent = 'Selected, press Ctrl+C' })
+  })
+  card.style.visibility = 'hidden'
+  stageEl.classList.add('dim'); chrome()
+  if (!Kit.reduced) {
+    const sx = from.width / to.w, sy = from.height / to.h
+    const opts = { duration: 520, easing: 'cubic-bezier(.2,.9,.25,1)' }
+    z.animate([{ transform: `translate(${from.left - to.x}px,${from.top - to.y}px) scale(${sx},${sy})`, borderRadius: `${22 / sx}px / ${22 / sy}px` }, { transform: 'none', borderRadius: '26px' }], opts)
+    z.querySelector('.short').animate([{ opacity: 1 }, { opacity: 0, offset: .3 }, { opacity: 0 }], opts)
+    z.querySelector('.long').animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 0, offset: .4 }, { opacity: 1, transform: 'none' }], opts)
+    await Kit.wait(520)
+  }
+  z.querySelector('.short').remove()
+  z.querySelector('.x').focus({ preventScroll: true })
+  busy = false
+}
+async function closeZoom() {
+  if (!zoomState || busy) return
+  busy = true
+  const { el: z, card } = zoomState
+  const to = card.getBoundingClientRect(), from = z.getBoundingClientRect()
+  stageEl.classList.remove('dim')
+  if (!Kit.reduced) {
+    z.querySelector('.long').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' })
+    await z.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${to.left - from.left}px,${to.top - from.top}px) scale(${to.width / from.width},${to.height / from.height})`, opacity: .4 }],
+      { duration: 380, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished
+  }
+  z.remove(); card.style.visibility = ''
+  zoomState = null; chrome()
+  card.focus({ preventScroll: true })
+  busy = false
+}
+
+backBtn.addEventListener('click', () => { if (zoomState) closeZoom(); else { clickRipple(backBtn); go('home', backBtn) } })
+Kit.onBack(() => zoomState ? closeZoom() : view !== 'home' && go('home', backBtn))
+intro()
+</script>

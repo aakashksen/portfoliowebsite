@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cell Division</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: glass bento on a living dot field. Opening an entry absorbs every block into it, then it divides into that entry's blocks */
+:root {
+  --bg: #050507; --glass: rgba(255,255,255,.055); --glass-hi: rgba(255,255,255,.09);
+  --line: rgba(255,255,255,.12); --line-hi: rgba(255,255,255,.3);
+  --fg: #f2f3f7; --muted: #9597a6; --accent: #8fb0ff; --ok: #5be39a;
+  --sans: "Geist", ui-sans-serif, system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+main { position: relative; min-height: 100vh; display: grid; place-items: center;
+  padding-block: 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#stage { width: 100%; max-width: 1120px; display: grid; gap: 16px }
+#stage.home { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(230px, auto)); grid-template-areas: "projects about experience" "blog about current" }
+#stage.section { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)) }
+.card { position: relative; background: var(--glass); border: 1px solid var(--line); border-radius: 22px; padding: 22px 24px;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); display: flex; flex-direction: column; justify-content: space-between; gap: 22px;
+  transition: translate .25s cubic-bezier(.2,.8,.2,1), border-color .2s, background .2s }
+.card.go { cursor: pointer }
+.card.go:hover { translate: 0 -4px; border-color: var(--line-hi); background: var(--glass-hi) }
+.card:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }
+.path { font: 500 12px/1 var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 12px }
+.card.go:hover .arrow { color: var(--fg); translate: 3px -3px }
+.arrow { transition: translate .25s }
+h2 { margin: 0 0 6px; font-size: clamp(22px, 2.3vw, 30px); font-weight: 600; letter-spacing: -.02em; text-wrap: balance }
+.card p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5 }
+.about { grid-area: about; justify-content: center; align-items: center; text-align: center; gap: 16px }
+.avatar { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; font: 600 28px var(--sans); background: radial-gradient(circle at 30% 25%, #c9d6ff, #4a5bd8 70%); color: #0b0d1a }
+.about h1 { margin: 0; font-size: clamp(26px, 2.6vw, 32px); font-weight: 650; letter-spacing: -.025em; text-wrap: balance }
+.email { font: 500 14px var(--mono); color: var(--accent); user-select: all; overflow-wrap: anywhere }
+.status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px }
+.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok) }
+.head { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-start; gap: 20px; padding: 18px 22px }
+.head h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); letter-spacing: -.03em; line-height: 1 }
+.head .count { margin-left: auto; font: 500 12px var(--mono); color: var(--muted); text-align: right }
+.back { flex: none; font: 500 13px var(--mono); color: var(--fg); background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; cursor: pointer }
+.back:hover { background: rgba(255,255,255,.12) }
+.item { min-height: 190px }
+.item .meta { font: 500 12px var(--mono); color: var(--accent) }
+.bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; margin-top: 14px }
+.bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--ok)); border-radius: 4px }
+@media (max-width: 820px) {
+  #stage.home { grid-template-columns: 1fr; grid-template-rows: none; grid-template-areas: "about" "projects" "experience" "blog" "current" }
+  .card { min-height: 160px }
+  .head { flex-wrap: wrap; min-height: 0 } .head .count { margin-left: 0 }
+}
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<main><div id="stage" class="home"></div></main>
+<script src="kit2.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const stage = document.getElementById('stage')
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 16, speed: 700, band: 110, life: 1900, push: 16,
+  render(ctx, dots) {
+    ctx.fillStyle = '#ffffff'
+    for (const d of dots) {
+      const s = 1.2 + d.e * 1.8
+      ctx.globalAlpha = 0.13 + d.e * 0.8
+      ctx.fillRect(d.x - s / 2, d.y - s / 2, s, s)
+    }
+    ctx.globalAlpha = 1
+  },
+})
+
+const homeHTML = () => SECTIONS.map(s => s.id === 'about'
+  ? `<article class="card go about" data-go="about">
+      <div class="avatar">${PERSON.initials}</div>
+      <div><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)}</p></div>
+      <span class="email">${esc(PERSON.email)}</span>
+      <span class="status"><i></i>${esc(PERSON.status)}</span>
+    </article>`
+  : `<article class="card go" data-go="${s.id}" style="grid-area:${s.id}">
+      <div class="path"><span>${s.path}</span><span class="arrow">↗</span></div>
+      <div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>
+    </article>`).join('')
+
+const sectionHTML = id => {
+  const s = SECTION[id], items = ITEMS[id]
+  return `<header class="card head">
+      <button class="back" type="button" data-back>← Home</button>
+      <div><div class="path"><span>${s.path}</span></div><h1>${esc(id === 'about' ? 'About' : s.title)}</h1></div>
+      <span class="count">${items.length} blocks<br>sample content</span>
+    </header>` + items.map(it => `<article class="card item">
+      <span class="meta">${esc(it.meta)}</span>
+      <div><h2>${esc(it.title)}</h2><p${it.title === 'Contact' ? ' class="email"' : ''}>${esc(it.text)}</p>
+      ${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>
+    </article>`).join('')
+}
+
+function wire() {
+  stage.querySelectorAll('[data-go]').forEach(el => Kit.pressable(el, () => go(el.dataset.go, el)))
+  stage.querySelectorAll('[data-back]').forEach(el => el.addEventListener('click', () => go('home', el.closest('.card'))))
+}
+
+const toPoint = (P, r, s) => `translate(${P.x - (r.left + r.width / 2)}px,${P.y - (r.top + r.height / 2)}px) scale(${s})`
+
+// New blocks split out of point P, one after another, each landing sends a ripple
+function divide(P, slow) {
+  return Kit.animateAll([...stage.children], (el, i, r) => ({
+    delay: (slow && el.classList.contains('about') ? 420 : i * 70), duration: slow ? 680 : 600,
+    keyframes: [{ transform: toPoint(P, r, .15), opacity: 0 }, { transform: 'none', opacity: 1 }],
+  }), (el, i, instant) => { if (!instant) { const c = Kit.centerOf(el); field.ripple(c.x, c.y, el.classList.contains('about') ? 1.3 : .55) } })
+}
+
+let view = 'home', busy = false
+async function go(target, fromEl) {
+  if (busy || target === view) return
+  busy = true
+  const P = Kit.centerOf(fromEl)
+  field.ripple(P.x, P.y, 1.5)
+  // Absorb: every block gets pulled into the one that was clicked
+  await Kit.animateAll([...stage.children], (el, i, r) => el === fromEl
+    ? { delay: 260, duration: 260, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards', keyframes: [{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(.2)', opacity: 0 }] }
+    : { delay: i * 25, duration: 380, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards', keyframes: [{ transform: 'none', opacity: 1 }, { transform: toPoint(P, r, .2), opacity: 0 }] })
+  view = target
+  stage.className = target === 'home' ? 'home' : 'section'
+  stage.innerHTML = target === 'home' ? homeHTML() : sectionHTML(target)
+  scrollTo(0, 0)
+  wire()
+  const first = stage.querySelector('.back, [data-go]')
+  await divide(P)
+  if (first) first.focus({ preventScroll: true })
+  busy = false
+}
+Kit.onBack(() => { if (view !== 'home') go('home', stage.firstElementChild) })
+
+stage.innerHTML = homeHTML()
+wire()
+divide({ x: innerWidth / 2, y: innerHeight / 2 }, true)
+</script>
+</body>
+</html>

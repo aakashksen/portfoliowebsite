@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mercury</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: blocks are liquid chrome. Each one buds out of a central pool and the blobs merge and stretch as they glide past each other */
+:root {
+  --bg: #07080a; --ink: #0c0e12; --chrome-a: #f4f6f9; --chrome-b: #9aa3b2; --chrome-c: #5d6576; --fg: #eef0f4; --mute: #7d8494; --accent: #5ac8ff;
+  --sans: "Manrope", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans) }
+#field { position: fixed; inset: 0; width: 100%; height: 100% }
+header { position: relative; z-index: 3; display: flex; align-items: center; gap: 16px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font: 500 12px var(--mono); color: var(--mute) }
+header b { color: var(--fg); font-weight: 500 }
+.back { font: 500 12px var(--mono); color: var(--ink); background: linear-gradient(135deg, var(--chrome-a), var(--chrome-b)); border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer }
+.back[hidden] { display: none }
+.back:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px }
+main { position: relative; padding-block: 8px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#wrap { position: relative }
+/* The goo layer: blobs mirror the cards and merge via an alpha-threshold filter */
+#goo { position: absolute; inset: 0; filter: url(#gooey); pointer-events: none }
+.blob { position: absolute; border-radius: 30px; background: linear-gradient(140deg, var(--chrome-a) 0%, var(--chrome-b) 38%, var(--chrome-a) 52%, var(--chrome-c) 100%) }
+#pool { position: absolute; border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--chrome-a), var(--chrome-b) 50%, var(--chrome-c)); transition: width .35s, height .35s, margin .35s }
+#stage { position: relative; height: calc(100vh - 64px - 48px) }
+.card { position: absolute; border-radius: 30px; padding: 22px 24px; overflow: hidden; color: var(--ink); display: flex; flex-direction: column; justify-content: space-between; gap: 14px;
+  transition: left .6s cubic-bezier(.2,1.2,.35,1), top .6s cubic-bezier(.2,1.2,.35,1), width .6s cubic-bezier(.2,1.2,.35,1), height .6s cubic-bezier(.2,1.2,.35,1) }
+.card.go { cursor: pointer }
+.card .in { display: contents }
+.tag { font: 500 11px var(--mono); display: flex; justify-content: space-between; gap: 10px; opacity: .7 }
+.card h2 { margin: 0 0 4px; font: 800 clamp(22px, 2.3vw, 30px)/1.05 var(--sans); letter-spacing: -.03em }
+.card p { margin: 0; opacity: .75 }
+.about { justify-content: center; text-align: center; align-items: center; gap: 12px }
+.about h1 { margin: 0; font: 800 clamp(28px, 3vw, 40px)/1 var(--sans); letter-spacing: -.04em }
+.email { font: 500 13px var(--mono); user-select: all; overflow-wrap: anywhere }
+.bar { height: 5px; background: rgba(0,0,0,.15); border-radius: 5px; margin-top: 10px } .bar span { display: block; height: 100%; background: var(--ink); border-radius: 5px }
+.card.go:hover .tag { opacity: 1 }
+@media (max-width: 700px) { #stage { height: auto } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="gooey"><feGaussianBlur in="SourceGraphic" stdDeviation="12" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter>
+</svg>
+<canvas id="field" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>← Back</button>
+  <span id="crumb"><b>mercury</b> / home</span>
+</header>
+<main><div id="wrap"><div id="goo"><div id="pool"></div></div><div id="stage"></div></div></main>
+<script src="kit2.js"></script>
+<script src="kit3.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 18, speed: 600, band: 100, life: 1800, push: 14,
+  render(ctx, dots) {
+    ctx.fillStyle = '#c9d1de'
+    for (const d of dots) { const s = 1.1 + d.e * 1.6; ctx.globalAlpha = .1 + d.e * .7; ctx.fillRect(d.x - s / 2, d.y - s / 2, s, s) }
+    ctx.globalAlpha = 1
+  },
+})
+
+const stageEl = document.getElementById('stage'), gooEl = document.getElementById('goo'), pool = document.getElementById('pool')
+const blobs = new Map()
+// Each frame, every blob copies its card's on-screen box (including the card's enter/exit motion)
+function sync() {
+  const base = stageEl.getBoundingClientRect()
+  for (const [card, blob] of blobs) {
+    if (!card.isConnected) { blob.remove(); blobs.delete(card); continue }
+    const r = card.getBoundingClientRect()
+    Object.assign(blob.style, { left: r.left - base.left + 'px', top: r.top - base.top + 'px', width: r.width + 'px', height: r.height + 'px' })
+  }
+  requestAnimationFrame(sync)
+}
+requestAnimationFrame(sync)
+function setPool(size) {
+  const cx = stageEl.clientWidth / 2, cy = Math.min(stageEl.clientHeight, innerHeight - 120) / 2
+  Object.assign(pool.style, { left: cx + 'px', top: cy + 'px', width: size + 'px', height: size + 'px', marginLeft: -size / 2 + 'px', marginTop: -size / 2 + 'px' })
+}
+setPool(0)
+
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'card' + (spec.go ? ' go' : '') + (spec.about ? ' about' : '')
+  el.innerHTML = spec.html
+  if (spec.go) Kit.pressable(el, () => go(spec.go))
+  const blob = document.createElement('div'); blob.className = 'blob'; gooEl.append(blob); blobs.set(el, blob)
+  return el
+}
+const toPool = el => { const r = Kit.rectOf(el), p = Kit.rectOf(pool); return `translate(${p.left + p.width / 2 - (r.left + r.width / 2)}px,${p.top + p.height / 2 - (r.top + r.height / 2)}px) scale(.15)` }
+const stage = Kit.Stage(stageEl, {
+  make,
+  layout: (k, W, H, ctx) => Kit.growLayout(k, W, H, { bento: ctx.home, cellH: 250, cellW: 350 }),
+  interval: 240,
+  // Bud out of the pool: start shrunk at the pool centre, stretch out to the slot
+  enter: el => el.animate([{ transform: toPool(el) }, { transform: 'none' }], { duration: 650, easing: 'cubic-bezier(.3,1.3,.4,1)' }),
+  exit: el => {
+    const a = el.animate([{ transform: 'none' }, { transform: toPool(el) }], { duration: 300, easing: 'cubic-bezier(.6,0,.8,.3)', fill: 'forwards' })
+    a.finished.then(() => { blobs.get(el)?.remove(); blobs.delete(el) })
+    return a
+  },
+  onSpawn: el => setTimeout(() => { const c = Kit.centerOf(el); field.ripple(c.x, c.y, .9) }, 300),
+})
+
+const home = () => SECTIONS.map(s => s.id === 'about'
+  ? { go: 'about', about: true, html: `<span class="tag"><span>/about</span><span>● ${esc(PERSON.status)}</span></span><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)}</p><span class="email">${esc(PERSON.email)}</span>` }
+  : { go: s.id, html: `<span class="tag"><span>${s.path}</span><span>${ITEMS[s.id].length} drops ↗</span></span><div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div>` })
+const section = id => ITEMS[id].map(it => ({ html: `<span class="tag"><span>${esc(it.meta)}</span></span><div><h2>${esc(it.title)}</h2><p>${esc(it.text)}</p>
+  ${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>` }))
+
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+const go = Kit.runApp(stage, {
+  home, section,
+  beforeClear: () => setPool(120),
+  onView: t => { setPool(120); backBtn.hidden = t === 'home'; crumb.innerHTML = `<b>mercury</b> / ${t === 'home' ? 'home' : esc(t === 'about' ? 'about' : SECTION[t].title.toLowerCase())}` },
+  afterSpawn: t => { setTimeout(() => setPool(0), 500); (t === 'home' ? document.querySelector('.card.go') : backBtn).focus({ preventScroll: true }) },
+})
+backBtn.addEventListener('click', () => go('home'))
+go('home')
+</script>
+</body>
+</html>

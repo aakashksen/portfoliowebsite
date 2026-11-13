@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Poster Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Swiss poster index. Opening an entry floods red out of its column and prints that entry's rows as a typographic table */
+:root {
+  --paper: #eef0f2; --ink: #111317; --mute: #5d636d; --rule: #c4c9d0; --red: #e3262f; --on-red: #ffffff; --on-red-mute: #ffd0d2;
+  --display: "Archivo", "Arial Narrow", sans-serif; --body: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@property --k { syntax: "<number>"; inherits: true; initial-value: 1 }
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--body) }
+#field { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none }
+body.open #field { z-index: 6 }
+main { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; gap: 48px; max-width: 1360px; margin: 0 auto;
+  padding-block: 28px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 32px; align-items: start }
+.meta { display: flex; justify-content: space-between; font: 500 12px var(--mono); color: var(--mute); text-transform: uppercase; letter-spacing: .08em; grid-column: 1 / -1 }
+.rule { height: 2px; background: var(--ink); transform-origin: left; grid-column: 1 / -1 }
+.huge { margin: 0; font-family: var(--display); font-variation-settings: "wdth" 66; font-weight: 850; text-transform: uppercase; line-height: .84; letter-spacing: -.01em }
+h1.huge { font-size: clamp(52px, 8.8vw, 168px) }
+.huge .line { display: block; overflow: hidden } .huge .line > span { display: inline-block }
+.dot { color: var(--red) }
+.profile { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; border-top: 2px solid var(--red) }
+.profile .role { font: 600 20px/1.2 var(--display); font-variation-settings: "wdth" 90 }
+.profile dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px }
+.profile dt { font: 500 11px/1.9 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--mute) }
+.profile dd { margin: 0; min-width: 0; overflow-wrap: anywhere }
+.about-link { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; cursor: pointer; align-self: start; border-bottom: 1px solid currentColor }
+.about-link:hover { color: var(--red) }
+.index { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink) }
+.col { padding: 16px 18px 22px; min-height: 230px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; border-right: 1px solid var(--rule); cursor: pointer; transition: background .18s, color .18s }
+.col:last-child { border-right: 0 }
+.col:hover, .col:focus-visible { background: var(--red); color: var(--on-red); outline: none }
+.col .path { font: 500 12px var(--mono); display: flex; justify-content: space-between }
+.col h2 { margin: 0; font-family: var(--display); font-variation-settings: "wdth" 72; font-weight: 800; text-transform: uppercase; font-size: clamp(30px, 3.6vw, 52px); line-height: .92 }
+.col p { margin: 8px 0 0; font-size: 14px; color: var(--mute) }
+.col:hover p, .col:focus-visible p { color: var(--on-red) }
+.col .n { font: 500 12px var(--mono) }
+/* The red sheet */
+#flood { position: fixed; inset: 0; z-index: 5; background: var(--red); visibility: hidden }
+#sheet { position: fixed; inset: 0; z-index: 7; overflow-y: auto; color: var(--on-red); visibility: hidden;
+  padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+body.open #flood, body.open #sheet { visibility: visible }
+.sheet-in { max-width: 1360px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px }
+.sbar { display: flex; justify-content: space-between; align-items: center; font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em }
+.back { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; background: var(--on-red); color: var(--red); border: 0; padding: 10px 14px; cursor: pointer }
+.back:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px }
+#sheet h2.huge { font-size: clamp(64px, 14vw, 220px) }
+.rows { display: flex; flex-direction: column }
+.row { display: grid; grid-template-columns: 56px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr); gap: 20px; padding: 18px 0 20px; position: relative; align-items: baseline }
+.row::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--on-red); transform-origin: left; transform: scaleX(var(--k, 1)) }
+.row .n { font: 500 13px var(--mono) }
+.row h3 { margin: 0; font: 800 clamp(26px, 3vw, 44px)/.95 var(--display); font-variation-settings: "wdth" 75; text-transform: uppercase }
+.row .m { font: 500 13px var(--mono); color: var(--on-red-mute) }
+.row p { margin: 0; color: var(--on-red) }
+@media (max-width: 900px) {
+  .top { grid-template-columns: 1fr }
+  .index { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .col:nth-child(2) { border-right: 0 } .col:nth-child(-n+2) { border-bottom: 1px solid var(--rule) }
+  .row { grid-template-columns: 40px minmax(0, 1fr); gap: 6px 14px } .row .m, .row p { grid-column: 2 }
+}
+@media (max-width: 520px) { .index { grid-template-columns: 1fr } .col { border-right: 0; border-bottom: 1px solid var(--rule); min-height: 150px } }
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<main>
+  <div class="top">
+    <div class="meta"><span>Portfolio — Index</span><span id="date"></span></div>
+    <div class="rule" id="rule"></div>
+    <h1 class="huge" aria-label="Aakash Senthilnathan"><span class="line"><span>Aakash</span></span><span class="line"><span>Senthilnathan<span class="dot">.</span></span></span></h1>
+    <aside class="profile" id="profile"></aside>
+  </div>
+  <nav class="index" id="index" aria-label="Sections"></nav>
+</main>
+<div id="flood" aria-hidden="true"></div>
+<section id="sheet" aria-live="polite"></section>
+<script src="kit2.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+const pad = n => String(n).padStart(2, '0')
+let openMode = false
+const field = Kit.Field(document.getElementById('field'), {
+  spacing: 34, speed: 800, band: 120, life: 1500, push: 10, mouseRadius: 140, mousePush: 8,
+  render(ctx, dots) {
+    ctx.lineWidth = 1
+    for (const d of dots) {
+      const s = 3 + d.e * 4
+      ctx.strokeStyle = openMode ? '#ffffff' : d.e > .15 ? '#e3262f' : '#111317'
+      ctx.globalAlpha = (openMode ? 0.2 : 0.16) + d.e * 0.7
+      ctx.beginPath(); ctx.moveTo(d.x - s, d.y); ctx.lineTo(d.x + s, d.y); ctx.moveTo(d.x, d.y - s); ctx.lineTo(d.x, d.y + s); ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+  },
+})
+document.getElementById('date').textContent = new Date().toISOString().slice(0, 10)
+document.getElementById('profile').innerHTML = `<div class="role">${esc(PERSON.role)}</div>
+  <dl><dt>Email</dt><dd>${esc(PERSON.email)}</dd><dt>Stack</dt><dd>${esc(PERSON.skills.join(' / '))}</dd><dt>Status</dt><dd>${esc(PERSON.status)}</dd></dl>
+  <span class="about-link" data-id="about">About me →</span>`
+const cols = SECTIONS.filter(s => s.id !== 'about')
+document.getElementById('index').innerHTML = cols.map(s => `<div class="col" data-id="${s.id}">
+  <div class="path"><span>${s.path}</span><span class="n">${ITEMS[s.id].length} entries →</span></div><div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)}</p></div></div>`).join('')
+document.querySelectorAll('[data-id]').forEach(el => Kit.pressable(el, () => open(el.dataset.id, el)))
+
+const flood = document.getElementById('flood'), sheet = document.getElementById('sheet')
+const insetOf = el => { const r = Kit.rectOf(el); return `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px)` }
+const ease = 'cubic-bezier(.7,0,.2,1)'
+let origin = null, busy = false
+
+async function open(id, el) {
+  if (busy || openMode) return
+  busy = true; origin = el
+  const s = SECTION[id]
+  sheet.innerHTML = `<div class="sheet-in">
+    <div class="sbar"><button class="back" type="button">← Index</button><span>${s.path} · ${ITEMS[id].length} entries · sample</span></div>
+    <h2 class="huge"><span class="line"><span>${esc(id === 'about' ? 'About' : s.title)}<span style="color:var(--ink)">.</span></span></span></h2>
+    <div class="rows">${ITEMS[id].map((it, i) => `<div class="row"><span class="n">${pad(i + 1)}</span><h3>${esc(it.title)}</h3><span class="m">${esc(it.meta)}</span><p>${esc(it.text)}</p></div>`).join('')}</div></div>`
+  sheet.querySelector('.back').addEventListener('click', close)
+  openMode = true; document.body.classList.add('open'); sheet.scrollTop = 0
+  const c = Kit.centerOf(el)
+  if (!Kit.reduced) {
+    await flood.animate([{ clipPath: insetOf(el) }, { clipPath: 'inset(0 0 0 0)' }], { duration: 520, easing: ease }).finished
+    field.ripple(c.x, c.y, 1.4)
+    sheet.querySelector('.huge .line > span').animate([{ transform: 'translateY(105%)' }, { transform: 'none' }], { duration: 520, easing: ease })
+    sheet.querySelector('.sbar').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 })
+    await Kit.animateAll([...sheet.querySelectorAll('.row')], (row, i) => ({
+      delay: 160 + i * 80, duration: 480, easing: ease,
+      keyframes: [{ '--k': 0, opacity: 0, transform: 'translateY(14px)' }, { '--k': 1, opacity: 1, transform: 'none' }],
+    }))
+  }
+  sheet.querySelector('.back').focus({ preventScroll: true })
+  busy = false
+}
+async function close() {
+  if (busy || !openMode) return
+  busy = true
+  if (!Kit.reduced) {
+    await sheet.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }).finished
+    await flood.animate([{ clipPath: 'inset(0 0 0 0)' }, { clipPath: insetOf(origin) }], { duration: 460, easing: ease }).finished
+  }
+  sheet.getAnimations().forEach(a => a.cancel())
+  openMode = false; document.body.classList.remove('open')
+  const c = Kit.centerOf(origin); field.ripple(c.x, c.y, .9)
+  origin.focus({ preventScroll: true })
+  busy = false
+}
+Kit.onBack(close)
+
+// Intro: rule draws, name rises, columns wipe in
+if (!Kit.reduced) {
+  document.getElementById('rule').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 600, easing: ease })
+  document.querySelectorAll('h1 .line > span').forEach((s, i) => s.animate([{ transform: 'translateY(105%)' }, { transform: 'none' }], { duration: 650, delay: 120 + i * 90, easing: ease, fill: 'backwards' }))
+  document.getElementById('profile').animate([{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 450, fill: 'backwards' })
+}
+Kit.animateAll([...document.querySelectorAll('.col')], (el, i) => ({ delay: 380 + i * 90, duration: 520, easing: ease, keyframes: [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }] }),
+  (el, i, instant) => { if (!instant) { const r = Kit.rectOf(el); field.ripple(r.left + r.width / 2, r.top, .8) } })
+</script>
+</body>
+</html>

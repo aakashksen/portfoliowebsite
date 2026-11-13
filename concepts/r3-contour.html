@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Contour Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,700;1,500&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a topographic survey sheet. Every block raises a hill under itself; the contour lines bend around it and ring outward when it lands */
+:root {
+  --sheet: #e7eadf; --line: #7d8a68; --line-hi: #4f5b3e; --card: #fbfbf6; --ink: #1f241a; --mute: #646d58; --peak: #d9502a;
+  --serif: "Spectral", Georgia, serif; --mono: "DM Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--sheet); color: var(--ink); font: 15px/1.5 var(--serif) }
+#map { position: fixed; inset: 0; width: 100%; height: 100% }
+header { position: relative; z-index: 2; display: flex; align-items: center; gap: 16px; height: 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font: 500 12px var(--mono); color: var(--mute); text-transform: uppercase; letter-spacing: .06em }
+header b { color: var(--ink); font-weight: 500 }
+header .scale { margin-left: auto; display: flex; align-items: center; gap: 8px }
+header .scale i { display: inline-block; width: 80px; height: 6px; border: 1px solid var(--ink); background: linear-gradient(90deg, var(--ink) 0 25%, transparent 25% 50%, var(--ink) 50% 75%, transparent 75%) }
+.back { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--card); background: var(--ink); border: 0; padding: 8px 12px; cursor: pointer }
+.back[hidden] { display: none }
+.back:focus-visible, .card:focus-visible { outline: 2px solid var(--peak); outline-offset: 3px }
+main { position: relative; padding-block: 8px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+#stage { position: relative; height: calc(100vh - 64px - 48px) }
+.card { position: absolute; background: var(--card); border: 1px solid var(--line-hi); padding: 16px 18px; overflow: visible; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;
+  box-shadow: 4px 4px 0 rgba(79,91,62,.18);
+  transition: left .55s cubic-bezier(.2,1.2,.35,1), top .55s cubic-bezier(.2,1.2,.35,1), width .55s cubic-bezier(.2,1.2,.35,1), height .55s cubic-bezier(.2,1.2,.35,1) }
+.card::before { content: "▲"; position: absolute; top: -13px; left: 50%; translate: -50% 0; color: var(--peak); font-size: 16px; line-height: 1 }
+.card.go { cursor: pointer }
+.card.go:hover { box-shadow: 6px 6px 0 rgba(217,80,42,.35) }
+.tag { font: 500 11px var(--mono); color: var(--mute); display: flex; justify-content: space-between; gap: 10px; text-transform: uppercase; letter-spacing: .05em }
+.tag .elev { color: var(--peak) }
+.card h2 { margin: 0 0 2px; font: 700 clamp(22px, 2.3vw, 30px)/1.05 var(--serif) }
+.card p { margin: 0; color: var(--mute); font-style: italic }
+.about { justify-content: center; gap: 10px }
+.about h1 { margin: 0; font: 700 clamp(30px, 3.1vw, 42px)/1 var(--serif) }
+.email { font: 500 13px var(--mono); color: var(--ink); user-select: all; overflow-wrap: anywhere; font-style: normal }
+.bar { height: 6px; border: 1px solid var(--line-hi); margin-top: 8px } .bar span { display: block; height: 100%; background: var(--peak) }
+@media (max-width: 700px) { #stage { height: auto } header .scale { display: none } }
+</style>
+</head>
+<body>
+<canvas id="map" aria-hidden="true"></canvas>
+<header>
+  <button class="back" id="back" type="button" hidden>← Back</button>
+  <span id="crumb"><b>Sheet 1</b> · Home survey</span>
+  <span class="scale"><i></i> 1 : 25 000</span>
+</header>
+<main><div id="stage"></div></main>
+<script src="kit2.js"></script>
+<script src="kit3.js"></script>
+<script>
+const { PERSON, SECTIONS, SECTION, ITEMS, esc } = Kit
+
+// Terrain = gentle base noise + a Gaussian hill under every card + travelling ripple rings; drawn with marching squares
+const cv = document.getElementById('map'), ctx = cv.getContext('2d')
+const S = 14
+let W = 0, H = 0, cols = 0, rows = 0, vals, raf = 0
+const hills = new Map(), rings = []
+function size() {
+  const d = Math.min(devicePixelRatio || 1, 2)
+  W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0)
+  cols = Math.ceil(W / S) + 1; rows = Math.ceil(H / S) + 1; vals = new Float32Array(cols * rows); kick()
+}
+const base = (x, y) => .32 * Math.sin(x * .0042 + 1.3) * Math.cos(y * .0051 - .4) + .22 * Math.sin((x + y) * .0023 + 2) + .12 * Math.cos(x * .011 - y * .007)
+const ease = k => 1 - (1 - k) ** 3
+function kick() { if (!raf) raf = requestAnimationFrame(frame) }
+function frame(now) {
+  raf = 0
+  let active = false
+  const hs = []
+  for (const [card, h] of hills) {
+    let a = Math.min(1, (now - h.born) / 900); if (a < 1) active = true
+    a = ease(a)
+    if (h.dying) { const k = Math.min(1, (now - h.dying) / 400); a *= 1 - k; if (k < 1) active = true; else { hills.delete(card); continue } }
+    const r = card.getBoundingClientRect()
+    hs.push({ x: r.left + r.width / 2, y: r.top + r.height / 2, sx: r.width * .75, sy: r.height * .75, a: a * 1.5 })
+  }
+  for (let i = rings.length - 1; i >= 0; i--) if (now - rings[i].t > 1800) rings.splice(i, 1)
+  if (rings.length) active = true
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    const x = i * S, y = j * S
+    let v = base(x, y)
+    for (const h of hs) { const dx = (x - h.x) / h.sx, dy = (y - h.y) / h.sy; v += h.a * Math.exp(-(dx * dx + dy * dy)) }
+    for (const r of rings) {
+      const age = (now - r.t) / 1000
+      if (age < 0) continue
+      const d = Math.hypot(x - r.x, y - r.y), R = age * 520
+      if (d < R + 60 && d > R - 160) v += .18 * Math.sin((d - R) * .05) * Math.exp(-(((d - R) / 90) ** 2)) * (1 - age / 1.8)
+    }
+    vals[j * cols + i] = v
+  }
+  ctx.clearRect(0, 0, W, H)
+  ctx.lineJoin = 'round'
+  for (let L = -.9, n = 0; L < 2.2; L += .12, n++) {
+    const index = n % 5 === 0
+    ctx.strokeStyle = index ? '#4f5b3e' : '#7d8a68'; ctx.globalAlpha = index ? .55 : .35; ctx.lineWidth = index ? 1.3 : .8
+    ctx.beginPath()
+    for (let j = 0; j < rows - 1; j++) for (let i = 0; i < cols - 1; i++) {
+      const a = vals[j * cols + i], b = vals[j * cols + i + 1], c = vals[(j + 1) * cols + i + 1], d = vals[(j + 1) * cols + i]
+      const code = (a > L) | ((b > L) << 1) | ((c > L) << 2) | ((d > L) << 3)
+      if (code === 0 || code === 15) continue
+      const x = i * S, y = j * S
+      const t = (p, q) => (L - p) / (q - p)
+      const top = [x + S * t(a, b), y], right = [x + S, y + S * t(b, c)], bottom = [x + S * t(d, c), y + S], left = [x, y + S * t(a, d)]
+      const seg = (p, q) => { ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]) }
+      switch (code) {
+        case 1: case 14: seg(left, top); break
+        case 2: case 13: seg(top, right); break
+        case 3: case 12: seg(left, right); break
+        case 4: case 11: seg(right, bottom); break
+        case 6: case 9: seg(top, bottom); break
+        case 7: case 8: seg(left, bottom); break
+        case 5: seg(left, top); seg(right, bottom); break
+        case 10: seg(top, right); seg(left, bottom); break
+      }
+    }
+    ctx.stroke()
+  }
+  ctx.globalAlpha = 1
+  if (!Kit.reduced && (active || moving)) kick()
+}
+let moving = false
+size(); let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(size, 120) })
+
+function make(spec) {
+  const el = document.createElement('article')
+  el.className = 'card' + (spec.go ? ' go' : '') + (spec.about ? ' about' : '')
+  el.innerHTML = spec.html
+  if (spec.go) Kit.pressable(el, () => go(spec.go))
+  return el
+}
+// Keep redrawing while cards glide so the hills follow them
+function glide() { moving = true; kick(); clearTimeout(glide.t); glide.t = setTimeout(() => { moving = false }, 700) }
+const stage = Kit.Stage(document.getElementById('stage'), {
+  make,
+  layout: (k, W, H, ctx) => Kit.growLayout(k, W, H, { bento: ctx.home, cellH: 240, cellW: 340 }),
+  interval: 240,
+  enter: el => el.animate([{ transform: 'translateY(14px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 450, easing: 'cubic-bezier(.2,.9,.3,1)' }),
+  exit: el => { const h = hills.get(el); if (h) h.dying = performance.now(); glide(); return el.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(10px)' }], { duration: 180, fill: 'forwards' }) },
+  onSpawn: el => {
+    hills.set(el, { born: Kit.reduced ? -1e9 : performance.now() })
+    const c = Kit.centerOf(el)
+    if (!Kit.reduced) rings.push({ x: c.x, y: c.y, t: performance.now() + 200 })
+    glide()
+  },
+})
+
+const elev = i => (1240 + i * 315).toLocaleString('en') + ' m'
+const home = () => SECTIONS.map((s, i) => s.id === 'about'
+  ? { go: 'about', about: true, html: `<span class="tag"><span>Summit · /about</span><span class="elev">${elev(6)}</span></span><h1>${esc(PERSON.name)}</h1><p>${esc(PERSON.role)}</p>
+      <span class="email">${esc(PERSON.email)}</span><p>${esc(PERSON.status)}</p>` }
+  : { go: s.id, html: `<span class="tag"><span>${s.path}</span><span class="elev">${elev(i)}</span></span><div><h2>${esc(s.title)}</h2><p>${esc(s.kicker)} · ${ITEMS[s.id].length} peaks</p></div>` })
+const section = id => ITEMS[id].map((it, i) => ({ html: `<span class="tag"><span>${esc(it.meta)}</span><span class="elev">${elev(i)}</span></span><div><h2>${esc(it.title)}</h2><p>${esc(it.text)}</p>
+  ${it.progress != null ? `<div class="bar"><span style="width:${it.progress * 100}%"></span></div>` : ''}</div>` }))
+
+const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
+const go = Kit.runApp(stage, {
+  home, section,
+  onView: t => { backBtn.hidden = t === 'home'; crumb.innerHTML = t === 'home' ? '<b>Sheet 1</b> · Home survey' : `<b>Sheet ${SECTIONS.findIndex(s => s.id === t) + 2}</b> · ${esc(t === 'about' ? 'About' : SECTION[t].title)} survey` },
+  afterSpawn: t => (t === 'home' ? document.querySelector('.card.go') : backBtn).focus({ preventScroll: true }),
+})
+backBtn.addEventListener('click', () => go('home'))
+go('home')
+</script>
+</body>
+</html>
