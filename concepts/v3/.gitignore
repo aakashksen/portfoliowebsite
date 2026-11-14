@@ -1,4 +1,2 @@
-# Resume PDF includes a phone number; keep it out of the public repo.
-# Regenerate locally with: python build_resume.py
-resume.pdf
+# The PDF (with phone number) is published on purpose as the downloadable copy.
 __pycache__/
