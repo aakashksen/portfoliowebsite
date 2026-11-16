@@ -1,0 +1,11 @@
+// Cloudflare Worker that serves the portfolio (npm run build -> out/) as static assets.
+// Step 1 keeps a workers.dev test address so the new site can be checked before the domain moves over;
+// once aakashsenthilnathan.com is attached in the dashboard, workers_dev goes to false so there is one address.
+{
+  "name": "portfolio",
+  "compatibility_date": "2026-11-01",
+  "build": { "command": "npm run build" },
+  "assets": { "directory": "./out" },
+  "workers_dev": true,
+  "preview_urls": false
+}
