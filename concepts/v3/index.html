@@ -6,7 +6,7 @@
 <meta name="description" content="Aakash Senthilnathan: Computer Science and Statistics & Data Science at UC Santa Barbara. AI/ML engineering and software engineering.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Montserrat:wght@800&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap">
 <style>
 /* v3.1: Experience + Projects on the left, me in the middle, the resume on the right.
    Same mechanic as Origin: dot field, cards spawn in and push aside, any card zooms into its write-up. */
@@ -31,11 +31,16 @@ svg { flex: none }
 #field { position: fixed; inset: 0; width: 100%; height: 100% }
 :focus-visible { outline: 2px solid var(--cs); outline-offset: 3px }
 
-/* Header: only a way back, shown once you leave home */
-body > header { position: relative; z-index: 3; display: flex; align-items: center; gap: 14px; height: 60px;
+/* Header: a way back and a Home / Section / Item trail, shown once you leave home. Sticky, so it stays reachable under a zoom. */
+body > header { position: sticky; top: 0; z-index: 11; display: flex; align-items: center; gap: 14px; height: 60px; transition: background .25s;
   padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)) }
-.crumb { font: 400 13px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-.crumb b { color: var(--fg); font-weight: 500 }
+body.away > header { background: rgba(8,9,11,.86); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px) }
+.crumb { display: flex; align-items: center; gap: 8px; min-width: 0; font: 400 13px var(--mono); color: var(--muted); white-space: nowrap }
+.crumb button { all: unset; flex: none; cursor: pointer; color: var(--soft); padding: 6px 2px; border-radius: 4px }
+.crumb button:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 4px }
+.crumb button:focus-visible { outline: 2px solid var(--cs); outline-offset: 2px }
+.crumb i { flex: none; font-style: normal; color: var(--faint) }
+.crumb b { min-width: 0; color: var(--fg); font-weight: 500; overflow: hidden; text-overflow: ellipsis }
 .back { flex: none; font: 500 13px var(--mono); background: var(--card); border: 1px solid var(--line-mid); border-radius: var(--r); padding: 7px 12px; cursor: pointer }
 .back[hidden] { display: none }
 .back:hover { border-color: var(--line-hi) }
@@ -62,42 +67,46 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--now); flex: none }
 .cap { font: 400 12px var(--mono); color: var(--muted) }
 
+/* Logo tiles: a real logo on its own ground, or a monogram when there is none */
+.logo { --lz: 38px; flex: none; display: inline-grid; place-items: center; width: var(--lz); height: var(--lz); border-radius: calc(var(--lz) * .22); overflow: hidden;
+  background: var(--lbg, #fff); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12) }
+.logo img { display: block; width: 74%; height: 74%; object-fit: contain }
+.logo.full img { width: 100%; height: 100% }
+.logo.sm { --lz: 20px } .logo.lg { --lz: 56px }
+.logo.mono { background: var(--card-hi); box-shadow: inset 0 0 0 1px var(--line-mid); font: 500 calc(var(--lz) * .5)/1 var(--serif); color: var(--fg) }
+
 /* Corner rows: each row opens its own write-up */
 .corner { justify-content: space-between }
-.rows { list-style: none; margin: 0 -10px; padding: 0; display: flex; flex-direction: column }
-.rows li { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: baseline; gap: 12px; padding: 7px 10px; border-top: 1px solid var(--line); font-size: 13.5px; border-radius: 6px; transition: background .15s }
+.rows { list-style: none; margin: 0 -10px; padding: 0; display: flex; flex-direction: column; justify-content: flex-end }
+/* Rows share the card's spare height (up to 56px each), so a short list does not leave a hole above it */
+.corner .rows { flex: 1 1 auto; min-height: 0; margin-top: 14px }
+.corner .rows li { flex: 0 1 56px; min-height: 35px }
+.rows li { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 7px 10px; border-top: 1px solid var(--line); font-size: 13.5px; border-radius: 6px; transition: background .15s }
 .rows li:hover { background: rgba(255,255,255,.07); border-top-color: transparent }
 .rows li:hover + li { border-top-color: transparent }
-.rows b { font-weight: 500; white-space: nowrap }
+.rows b { display: inline-flex; align-items: center; gap: 9px; font-weight: 500; white-space: nowrap }
 .rows span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; transition: color .15s }
 .rows li:hover span { color: var(--soft) }
 .rows em { font: normal 400 12px var(--mono); color: var(--muted); display: inline-flex; align-items: center; gap: 6px; min-width: 3.4em; justify-content: flex-end }
 .rows em.now { color: var(--now) }
-.livecard { cursor: default; gap: 12px }
 .livecard { cursor: default; gap: 14px }
-.tiles { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-height: 0 }
-.tile { --tbg: #f4f2ed; --tfg: #17171a; --tac: #17171a; --tacfg: #fff;
-  position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r); text-decoration: none;
-  background: var(--tbg); color: var(--tfg); box-shadow: 0 0 0 1px rgba(255,255,255,.06); transition: translate .25s, box-shadow .25s }
-.tile:hover { translate: 0 -3px; box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 20px 40px -20px color-mix(in srgb, var(--tac) 70%, transparent) }
-.shot { position: relative; flex: 1 1 auto; min-height: 60px; overflow: hidden }
-.shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: scale .6s cubic-bezier(.2,.8,.2,1) }
-.tile:hover .shot img { scale: 1.06 }
-.badge { position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 7px; font: 500 11px var(--mono); letter-spacing: .02em;
-  color: #fff; background: rgba(10,14,10,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 999px; padding: 4px 9px 4px 8px }
+.tiles { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; min-height: 0 }
+.tile { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r); text-decoration: none;
+  background: rgba(255,255,255,.025); border: 1px solid var(--line); transition: border-color .2s, background .2s, translate .25s }
+.tile:hover { border-color: var(--line-hi); background: rgba(255,255,255,.055); translate: 0 -2px }
+.shot { position: relative; flex: 1 1 84px; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--line) }
+.shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; filter: saturate(.8) brightness(.9); transition: scale .6s cubic-bezier(.2,.8,.2,1), filter .3s }
+.tile:hover .shot img { scale: 1.04; filter: none }
 .pulse { position: relative; width: 7px; height: 7px; border-radius: 50%; background: #5fe08a; flex: none }
 .pulse::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: ping 1.8s cubic-bezier(0,0,.2,1) infinite }
 @keyframes ping { 70%, 100% { transform: scale(2.6); opacity: 0 } }
-.tbody { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 14px }
-.brand { display: flex; align-items: center; gap: 7px; min-width: 0 }
-.brand .leaf { width: 17px; height: 17px; color: var(--tac) }
-.brand .glasses { width: 24px; height: 24px }
-.brand b { font: 800 17px/1 Montserrat, var(--sans); letter-spacing: .01em }
-.brand .url { margin-left: auto; font: 400 11px var(--mono); opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-.tbody p { margin: 0; font-size: 13px; line-height: 1.4; opacity: .82; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
-.cta { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; font: 600 13px var(--sans); color: var(--tacfg); background: var(--tac);
-  border-radius: 999px; padding: 8px 14px 8px 16px; transition: filter .2s, gap .2s }
-.tile:hover .cta { filter: brightness(1.12); gap: 12px }
+.tbody { flex: none; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 11px }
+.brand { display: flex; align-items: baseline; gap: 8px; min-width: 0 }
+.brand .dot { align-self: center }
+.brand b { font: 600 14.5px/1.25 var(--sans); white-space: nowrap }
+.brand .url { margin-left: auto; min-width: 0; font: 400 11.5px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .2s }
+.tile:hover .url { color: var(--fg) }
+.tbody p { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
 .btn.livebtn { --tac: var(--fg); --tacfg: #0b0b0d; background: var(--tac); color: var(--tacfg); border-color: var(--tac); font-family: var(--sans); font-weight: 600; border-radius: 999px; padding-inline: 12px 14px }
 .btn.livebtn:hover { background: var(--tac); border-color: var(--tac); filter: brightness(1.12) }
 .livebtn .arr { transition: translate .2s } .livebtn:hover .arr { translate: 3px 0 }
@@ -110,17 +119,21 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 .btn.primary { background: var(--fg); color: #0b0b0d; border-color: var(--fg) }
 .btn.primary:hover { background: #fff }
 .btnrow { display: flex; gap: 8px; flex-wrap: wrap }
-.btngrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
-.btngrid .btn { padding-inline: 6px }
+.btngrid { display: flex; flex-wrap: wrap; gap: 8px }
+.btngrid .btn { flex: 1 1 0; min-width: max-content; padding-inline: 6px }
 
 /* About (centre) */
 .about { cursor: default; padding: 0; gap: 0 }
-.portrait { width: 100%; flex: 1 1 auto; min-height: 110px; object-fit: cover; object-position: 50% 22%; display: block; border-bottom: 1px solid var(--line); filter: saturate(.9) }
+.portrait { width: 100%; aspect-ratio: 1.35; flex: 1 1 auto; min-height: 110px; object-fit: cover; object-position: 50% 22%; display: block; border-bottom: 1px solid var(--line); filter: saturate(.9) }
 .who { padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 13px }
 .who h1 { margin: 0; font: 400 clamp(28px, 2.4vw, 34px)/1.05 var(--serif); letter-spacing: -.015em }
-.mj { display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; color: var(--soft) }
-.mj span { display: flex; align-items: center; gap: 9px }
-.mj .cap { margin-top: 2px }
+.school { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; margin-top: -5px }
+.school b { font: 600 16px/1.3 var(--sans); letter-spacing: -.01em }
+.school span { font: 500 12.5px var(--mono); color: var(--fg); white-space: nowrap }
+.mj { display: flex; flex-direction: column; gap: 4px; padding-top: 11px; border-top: 1px solid var(--line); font: 500 15px/1.35 var(--sans); color: var(--fg) }
+.mj span { display: flex; align-items: baseline; gap: 10px }
+.mj .sq { width: 9px; height: 9px; border-radius: 2px }
+.mj .cap { margin-bottom: 2px }
 .thesis { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.5; text-wrap: pretty }
 .focus { display: flex; flex-direction: column; gap: 6px; padding: 11px 0; border-block: 1px solid var(--line) }
 .focus .what { display: flex; flex-wrap: wrap; gap: 4px 10px; font: 500 15px var(--sans) }
@@ -128,10 +141,11 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 .focus .open { display: flex; align-items: center; gap: 8px }
 
 /* Resume card + paper */
-.resumecard { gap: 14px }
-.paperwrap { position: relative; flex: 1 1 auto; min-height: 120px; overflow: hidden; border-radius: 4px; background: var(--paper) }
-.paperwrap::after { content: ""; position: absolute; inset: auto 0 0; height: 30%; background: linear-gradient(transparent, var(--card)); pointer-events: none; transition: background .2s }
-.card:hover .paperwrap::after { background: linear-gradient(transparent, var(--card-hi)) }
+.resumecard { gap: 12px; justify-content: space-between }
+/* The page preview: only while the card is large during the intro. It sits between the title and the buttons and shrinks away as the card settles. */
+.paperwrap { display: none; position: absolute; inset: 58px 22px 68px; overflow: hidden; border-radius: 4px; background: var(--paper) }
+.resumecard.big .paperwrap { display: block }
+.paperwrap::after { content: ""; position: absolute; inset: auto 0 0; height: 30%; background: linear-gradient(transparent, var(--card)); pointer-events: none }
 .paperwrap .paper { position: absolute; top: 0; left: 0; width: 816px; transform-origin: 0 0; transform: scale(var(--s, .4)); pointer-events: none }
 .paper { background: var(--paper); color: var(--ink); font: 400 14.5px/1.45 var(--serif); padding: 40px 48px 48px }
 .paper .pname { text-align: center; font: 600 30px/1.1 var(--serif); margin: 0 0 6px }
@@ -157,23 +171,21 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 .pent.hit:hover .row span, .pent.hit:focus-visible .row span { visibility: hidden }
 .pskills { margin: 2px 0 }
 
-/* Spawned entry cards */
+/* Spawned entry cards: roles and projects share one pattern (logo, name, role, one line, one number, an explicit way in) */
 .entry { gap: 12px }
 .etop { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 400 12px var(--mono); color: var(--muted) }
-.nowtag { display: inline-flex; align-items: center; gap: 6px; color: var(--now) }
-.role { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.35 }
-.sum { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.55; text-wrap: pretty }
-.nums { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line) }
-.nums > div { padding: 10px 0; display: flex; flex-direction: column; gap: 3px; min-width: 0 }
-.nums > div + div { padding-left: 14px; border-left: 1px solid var(--line) }
-.nums > div:only-child { grid-column: 1 / -1 }
-.nums b { font: 500 19px/1.1 var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums }
-.nums span { font-size: 12px; color: var(--muted); line-height: 1.35 }
-.lens { display: flex; flex-direction: column; gap: 5px }
-.lens div { display: grid; grid-template-columns: auto 3.3em minmax(0,1fr); align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--soft) }
-.lens b { font: 500 11px var(--mono); color: var(--muted); letter-spacing: .02em }
-.more { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 400 12px var(--mono); color: var(--muted) }
-.card:hover .more > span:first-child { color: var(--fg) }
+.when { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap }
+.role { margin-top: 5px; font: 500 14.5px/1.35 var(--sans); color: var(--soft); text-wrap: balance }
+.sum { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; text-wrap: pretty }
+.stat { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 9px }
+.stat b { font: 500 19px/1.15 var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap }
+.stat span { font: 400 12px var(--mono); color: var(--muted) }
+.efoot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 500 12.5px var(--mono) }
+.view { display: inline-flex; gap: 7px; color: var(--fg) }
+.view i { font-style: normal; transition: translate .2s }
+.card:hover .view i, .card:focus-visible .view i { translate: 4px 0 }
+.livelink { display: inline-flex; align-items: center; gap: 8px; color: var(--soft); text-decoration: none; white-space: nowrap }
+.livelink:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 4px }
 
 /* Zoom */
 .zoom { position: fixed; z-index: 10; background: var(--panel); border: 1px solid var(--line-mid); border-radius: 10px; overflow: hidden; transform-origin: 0 0; box-shadow: 0 40px 120px -30px rgba(0,0,0,.9) }
@@ -181,24 +193,40 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 .zoom .long { position: absolute; inset: 0; overflow-y: auto; padding: 30px clamp(20px, 4.5vw, 56px) 56px; overscroll-behavior: contain }
 .x { position: absolute; z-index: 2; top: 14px; right: 14px; font: 500 12px var(--mono); background: var(--card); border: 1px solid var(--line-mid); border-radius: var(--r); padding: 6px 10px; cursor: pointer }
 .x:hover { border-color: var(--line-hi) }
-.kick { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font: 400 12px var(--mono); color: var(--muted); padding-right: 90px }
+.kick { display: flex; gap: 7px 14px; flex-wrap: wrap; align-items: center; font: 400 12px var(--mono); color: var(--muted); padding-right: 90px }
 .long h3 { margin: 14px 0 6px; font: 400 clamp(36px, 5vw, 60px)/1 var(--serif); letter-spacing: -.02em; text-wrap: balance }
 .long .sub { margin: 0 0 22px; color: var(--muted); font-size: 16px }
-.lede { margin: 0 0 34px; max-width: 62ch; font: 400 clamp(18px, 1.7vw, 21px)/1.5 var(--serif); color: var(--fg); text-wrap: pretty }
-.cols { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 48px; align-items: start }
+.long .btnrow { margin-bottom: 24px }
 .sect { font: 500 11.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding-bottom: 10px; border-bottom: 1px solid var(--line); margin: 0 0 4px }
-.rail .sect:not(:first-child) { margin-top: 30px }
+/* An opened role or project: who and when, the title large, then the write-up beside a rail of numbers, facts and stack */
+.ihead { display: flex; align-items: center; gap: 14px; padding-right: 90px }
+.ihead .kick { padding: 0; margin-top: 3px }
+.iorg { font: 600 17px/1.25 var(--sans); letter-spacing: -.01em }
+.long h3.ititle { margin: 20px 0 10px; font-size: clamp(30px, 3.9vw, 46px); line-height: 1.04 }
+.long .sub { margin: 0; color: var(--soft); font-size: 17px }
+.icols { margin-top: 26px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 44px; align-items: start }
 .built { list-style: none; margin: 0; padding: 0 }
 .built li { display: grid; grid-template-columns: 2.4em minmax(0,1fr); gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line) }
 .built .i { font: 400 12px/1.9 var(--mono); color: var(--faint) }
 .built h4 { margin: 0 0 4px; font: 600 16px/1.35 var(--sans) }
-.built p { margin: 0; color: var(--soft); font-size: 15px; line-height: 1.65; max-width: 68ch }
-.bign { margin: 0 }
-.bign div { padding: 12px 0; border-bottom: 1px solid var(--line) }
-.bign dt { font: 500 24px/1.1 var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums }
-.bign dd { margin: 4px 0 0; font-size: 13px; color: var(--muted); line-height: 1.4 }
-.rail .lens, .rail .btnrow { padding-top: 12px }
-.stack { margin: 12px 0 0; font: 400 13px/1.7 var(--mono); color: var(--soft) }
+.built p { margin: 0; color: var(--soft); font-size: 15.5px; line-height: 1.65; text-wrap: pretty }
+.built p b { color: var(--fg); font-weight: 500 }
+.irail { display: flex; flex-direction: column; gap: 26px; min-width: 0 }
+.irail .btnrow { margin: 10px 0 0 }
+.ishot { display: block; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r); border: 1px solid var(--line-mid) }
+.ishot img { display: block; width: 100%; height: 100%; object-fit: cover; transition: scale .6s cubic-bezier(.2,.8,.2,1) }
+.ishot:hover img { scale: 1.04 }
+/* Stats: a figure and a few words, one line each */
+.stats { margin: 0 }
+.stats div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line) }
+.stats dt { order: 2; font: 400 12px/1.3 var(--mono); color: var(--muted); text-align: right }
+.stats dd { margin: 0; font: 500 18px/1.2 var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap }
+.facts { margin: 0 }
+.facts div { display: grid; grid-template-columns: 5.2em minmax(0,1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; line-height: 1.4 }
+.facts dt { font: 400 12px/1.55 var(--mono); color: var(--muted) }
+.facts dd { margin: 0; color: var(--soft) }
+.chips { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px }
+.chips li { font: 400 12px/1 var(--mono); color: var(--soft); border: 1px solid var(--line-mid); border-radius: 999px; padding: 6px 9px }
 
 /* Resume view */
 .rcols { display: grid; grid-template-columns: minmax(0, 816px) 230px; gap: 36px; justify-content: center; align-items: start }
@@ -206,7 +234,7 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 .rrail { position: sticky; top: 0; display: flex; flex-direction: column; gap: 8px }
 .rrail .sect { margin-top: 22px } .rrail .sect:first-child { margin-top: 0 }
 .rrail > .btn { justify-content: flex-start }
-.rrail .btngrid { grid-template-columns: 1fr } .rrail .btngrid .btn { justify-content: flex-start; padding-inline: 12px }
+.rrail .btngrid { flex-direction: column } .rrail .btngrid .btn { flex: none; justify-content: flex-start; padding-inline: 12px }
 .jump { display: flex; flex-direction: column }
 .jump button { all: unset; cursor: pointer; display: flex; justify-content: space-between; padding: 7px 2px; border-bottom: 1px solid var(--line); font-size: 13.5px; color: var(--soft) }
 .jump button:hover { color: var(--fg) }
@@ -214,13 +242,25 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 .hint { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 6px 0 0 }
 
 @media (max-width: 1100px) { .rcols { grid-template-columns: 1fr } .rrail { position: static } }
-@media (max-width: 860px) { .cols { grid-template-columns: 1fr; gap: 28px } }
+@media (max-width: 980px) {
+  .icols { grid-template-columns: 1fr; gap: 30px }
+  .irail { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 26px 32px }
+  .ishot { max-width: 420px }
+}
+@media (min-width: 701px) and (max-width: 960px) { .rows li > span, .brand .url { display: none } }
 @media (max-width: 700px) {
   #stage { height: auto; min-height: 0 }
   .rcols .paper { padding: 24px 18px 28px; font-size: 13.5px; margin-inline: -8px }
   .rcols .paper .pname { font-size: 24px }
   .rcols .pent .row { flex-direction: column; gap: 0 }
   .rcols .pent .open { display: none }
+  .shot { flex-basis: 130px }
+  .btn, .back, .x, .livelink, .crumb button { min-height: 40px }
+  .crumb button { padding-block: 0; display: inline-flex; align-items: center }
+  .ihead { align-items: flex-start }
+  .long .sub { font-size: 16px }
+  .rows li, .jump button { padding-block: 10px }
+  .pmore { padding: 9px 10px }
 }
 @media (prefers-reduced-motion: reduce) { .card[role=button]:hover { translate: none } }
 </style>
@@ -228,7 +268,7 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 <canvas id="field" aria-hidden="true"></canvas>
 <header>
   <button class="back" id="back" type="button" hidden>← Back</button>
-  <span class="crumb" id="crumb"></span>
+  <nav class="crumb" id="crumb" aria-label="Breadcrumb"></nav>
 </header>
 <main><div id="stage"></div></main>
 
@@ -237,11 +277,8 @@ h2 { margin: 0; font: 600 21px/1.15 var(--sans); letter-spacing: -.015em; text-w
 <script src="resume.js"></script>
 <script>
 const { PERSON, SECTION, ITEMS, esc } = Kit
-const LENS = { cs: 'CS', st: 'Stats' }
 const PDF = { href: 'resume.pdf', name: 'Aakash_Senthilnathan_Resume.pdf' }
 const MD = { href: 'resume.md', name: 'Aakash_Senthilnathan_Resume.md' }
-const LEAF = '<svg class="leaf" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5C4.5 10.5 10 4.8 20 4c-.6 9.6-6.3 15.5-15.5 15.5z" fill="currentColor" opacity=".9"/><path d="M4.5 19.5L14.5 9.5" stroke="var(--tbg, #fff)" stroke-width="1.4" fill="none"/></svg>'
-const GLASSES = '<svg class="leaf glasses" viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="var(--tfg, currentColor)" stroke-width="5" stroke-linecap="round"><rect x="4" y="21" width="24" height="21" rx="8"/><rect x="36" y="21" width="24" height="21" rx="8"/><path d="M28 28q4-4 8 0"/></g><rect x="41" y="27" width="14" height="4.5" rx="2.25" fill="currentColor"/><rect x="41" y="34" width="9" height="3.5" rx="1.75" fill="var(--tfg, currentColor)" opacity=".55"/></svg>'
 const ICON = {
   mail: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="m2 4 6 5 6-5"/></svg>',
   down: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 2v8m-3.5-3.5L8 10l3.5-3.5M2.5 13.5h11"/></svg>',
@@ -265,7 +302,9 @@ const softRipple = (P, s = .6) => field.ripple(P.x, P.y, s)
 // ---------- Layout ----------
 const stageEl = document.getElementById('stage')
 let cards = [], view = null, busy = false
-const GAP = 16
+const GAP = 16, RESUME_H = 118
+// The resume card's page preview is drawn at 816px and scaled to whatever width the card has
+const paperRO = new ResizeObserver(es => es.forEach(e => e.target.style.setProperty('--s', e.contentRect.width / 816)))
 const viewH = () => Math.min(stageEl.clientHeight, innerHeight - 112)
 const narrow = () => innerWidth <= 700
 function measure(el, w) {
@@ -283,8 +322,8 @@ function homeLayout(k, els) {
     const order = k === 5 ? [4, 0, 2, 1, 3] : [0, 2, 1, 3], out = []
     let y = 0
     for (const i of order) {
-      const el = els && els[i], min = i === 4 ? 560 : i === 1 ? 380 : 180
-      const h = i === 1 ? min : el ? Math.max(min, measure(el, W)) : min
+      const el = els && els[i], min = i === 4 ? 560 : i === 1 ? RESUME_H : 180
+      const h = el ? Math.max(min, measure(el, W)) : min
       out[i] = { x: 0, y, w: W, h }; y += h + GAP
     }
     return out
@@ -293,10 +332,12 @@ function homeLayout(k, els) {
     const s = 140, g = 10, x0 = (W - (2 * s + g)) / 2, y0 = (H - (2 * s + g)) / 2
     return [0, 1, 2, 3].map(i => ({ x: x0 + (i % 2) * (s + g), y: y0 + Math.floor(i / 2) * (s + g), w: s, h: s }))
   }
-  const maxW = Math.min(W, 1180), cw = (maxW - 2 * GAP) / 3, ch = Math.min(310, (H - GAP) / 2), full = 2 * ch + GAP
+  const maxW = Math.min(W, 1180), cw = (maxW - 2 * GAP) / 3
+  const full = Math.max(2 * Math.min(310, (H - GAP) / 2) + GAP, els && els[4] ? measure(els[4], cw) : 0), ch = (full - GAP) / 2
   const x0 = (W - maxW) / 2, y0 = Math.max(0, (H - full) / 2), xr = x0 + 2 * (cw + GAP)
-  return [{ x: x0, y: y0, w: cw, h: ch }, { x: xr, y: y0, w: cw, h: ch },
-    { x: x0, y: y0 + ch + GAP, w: cw, h: ch }, { x: xr, y: y0 + ch + GAP, w: cw, h: ch },
+  // Right column: a compact resume card, and the live tiles take the rest
+  return [{ x: x0, y: y0, w: cw, h: ch }, { x: xr, y: y0, w: cw, h: RESUME_H },
+    { x: x0, y: y0 + ch + GAP, w: cw, h: ch }, { x: xr, y: y0 + RESUME_H + GAP, w: cw, h: full - RESUME_H - GAP },
     { x: x0 + cw + GAP, y: y0, w: cw, h: full }]
 }
 function entryLayout(els) {
@@ -304,7 +345,7 @@ function entryLayout(els) {
   const cw = Math.min(380, (W - GAP * (cols - 1)) / cols)
   const hs = els.map(el => measure(el, cw))
   const rows = Math.ceil(k / cols), rowH = []
-  for (let r = 0; r < rows; r++) rowH.push(Math.max(240, ...hs.slice(r * cols, r * cols + cols)))
+  for (let r = 0; r < rows; r++) rowH.push(Math.max(...hs.slice(r * cols, r * cols + cols)))
   const totalH = rowH.reduce((a, b) => a + b, 0) + (rows - 1) * GAP
   let y = Math.max(0, (viewH() - totalH) / 2)
   const out = []
@@ -323,16 +364,20 @@ function place(el, r, instant) {
 }
 function fit(R) { stageEl.style.minHeight = Math.max(...R.map(r => r.y + r.h)) + 'px' }
 let rt
-addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!cards.length) return; const R = layoutFor(); cards.forEach((c, i) => place(c, R[i], true)); fit(R) }, 80) })
-
-// The mini resume scales to whatever width its card has
-const paperRO = new ResizeObserver(es => es.forEach(e => e.target.style.setProperty('--s', e.contentRect.width / 816)))
+function relayout() {
+  if (zoomState) { const t = zoomTarget(); Object.assign(zoomState.el.style, { left: t.x + 'px', top: t.y + 'px', width: t.w + 'px', height: t.h + 'px' }) }
+  if (busy || !cards.length) return
+  const R = layoutFor(); cards.forEach((c, i) => place(c, R[i], true)); fit(R)
+}
+addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(relayout, 80) })
+document.fonts.ready.then(relayout)
 
 function make(spec) {
   const el = document.createElement('article')
   el.className = 'card ' + (spec.cls || '')
   el.innerHTML = spec.html
   el.spec = spec
+  const pw = el.querySelector('.paperwrap'); if (pw) paperRO.observe(pw)
   el.addEventListener('click', e => {
     const row = e.target.closest('[data-open]')
     if (row) { e.stopPropagation(); field.ripple(e.clientX, e.clientY, 1.4); const [sec, i] = row.dataset.open.split(':'); openItem(sec, ITEMS[sec][+i], el); return }
@@ -351,7 +396,6 @@ function make(spec) {
     e.stopPropagation()
     if (a.dataset.open && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); a.click() }
   }))
-  const pw = el.querySelector('.paperwrap'); if (pw) paperRO.observe(pw)
   return el
 }
 // Background tabs pause animations, so never wait on one for longer than it should take
@@ -399,8 +443,8 @@ function resumeHTML(live) {
       ${s.entries.map(e => {
         if (e.label) return `<p class="pskills"><b>${esc(e.label)}:</b> ${esc(e.text)}</p>`
         const it = live && sec ? siteItem(sec, e) : null
-        const attrs = it ? ` class="pent hit" data-item="${sec}:${ITEMS[sec].indexOf(it)}" tabindex="0" role="button" aria-label="Open the ${esc(it.title)} write-up"` : ' class="pent"'
-        return `<div${attrs}>${it ? '<span class="open">Open write-up →</span>' : ''}
+        const attrs = it ? ` class="pent hit" data-item="${sec}:${ITEMS[sec].indexOf(it)}" tabindex="0" role="button" aria-label="Open ${esc(it.title)}"` : ' class="pent"'
+        return `<div${attrs}>${it ? '<span class="open">Open →</span>' : ''}
           <div class="row"><b>${esc(e.title)}</b><span>${esc(e.dates)}</span></div>
           ${e.org ? `<div class="org">${esc(e.org)}</div>` : ''}
           ${e.bullets ? `<ul>${e.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}
@@ -408,12 +452,25 @@ function resumeHTML(live) {
       }).join('')}</section>`
     }).join('')}</div>`
 }
+// What an opened write-up lists: the resume bullets when resume.js has this entry, otherwise its content.js items
+function points(it) {
+  const sec = Object.keys(ITEMS).find(k => ITEMS[k].includes(it))
+  const s = window.RESUME.sections.find(s => SECTION_OF[s.title] === sec)
+  const e = s && s.entries.find(e => siteItem(sec, e) === it)
+  return e && e.bullets ? e.bullets.map(b => [null, b]) : it.built
+}
+// Escape a bullet and set its figures (26,000+, 86%, 720ms, $500M+) in the brighter text colour
+const figures = t => esc(t).replace(/(?<![\w\/.-])\$?\d[\d,]*(?:\.\d+)?(?:-\d+)?[MK]?(?:ms)?[+%]?(?![\w])/g, m => `<b>${m}</b>`)
 const dlButtons = (cls = '') => `<a class="btn ${cls}" href="${PDF.href}" download="${PDF.name}">${ICON.down}Download PDF</a><a class="btn" href="${MD.href}" download="${MD.name}">${ICON.down}Markdown</a>`
 
 // ---------- Card markup ----------
-const nowTag = '<span class="nowtag"><span class="dot"></span>Now</span>'
-const lensHTML = lens => !lens ? '' : `<div class="lens">${Object.keys(LENS).filter(k => lens[k]).map(k =>
-  `<div><i class="sq ${k}"></i><b>${LENS[k]}</b><span>${esc(lens[k])}</span></div>`).join('')}</div>`
+const sectionOf = it => Object.keys(ITEMS).find(k => ITEMS[k].includes(it))
+function logo(it, size = '') {
+  const l = it.logo || {}
+  if (!l.src) return `<span class="logo mono ${size}" aria-hidden="true">${esc(l.mono || it.title[0])}</span>`
+  return `<span class="logo ${l.full ? 'full' : ''} ${size}"${l.bg ? ` style="--lbg:${l.bg}"` : ''}><img src="${size === 'sm' && l.sm ? l.sm : l.src}" alt="" width="64" height="64" decoding="async"></span>`
+}
+const when = it => `<span class="when">${it.now ? '<span class="dot"></span>' : ''}${esc(it.dates)}</span>`
 const projLinks = it => [it.live && `<a class="btn livebtn" href="${it.live}" target="_blank" rel="noopener"${it.preview ? ` style="--tac:${it.preview.accent};--tacfg:${it.preview.accentFg}"` : ''}><span class="pulse"></span>Live site <span class="arr">→</span></a>`, it.source && `<a class="btn" href="${it.source}" target="_blank" rel="noopener">Source ${ICON.ext}</a>`].filter(Boolean).join('')
 const contactButtons = () => `<div class="btngrid">
   <a class="btn" href="mailto:${PERSON.email}" data-mail title="${esc(PERSON.email)}">${ICON.mail}<span>Email</span></a>
@@ -426,14 +483,15 @@ function copyMail(btn) {
   }, () => {})
 }
 
-function homeCard(id) {
+function homeCard(id, big) {
   if (id === 'about') return { cls: 'about', html: `<img class="portrait" src="${PERSON.photo}" alt="${esc(PERSON.name)}">
     <div class="who">
       <h1>${esc(PERSON.name)}</h1>
-      <div class="mj"><span><i class="sq cs"></i>${esc(PERSON.majors.cs)}</span><span><i class="sq st"></i>${esc(PERSON.majors.st)}</span>
-        <span class="cap">${esc(PERSON.school)} · Class of 2028</span></div>
+      <div class="school"><b>${esc(PERSON.school)}</b><span>Class of ${esc(PERSON.grad.match(/\d{4}/)[0])}</span></div>
+      <div class="mj"><span class="cap">Double Major</span>
+        <span><i class="sq cs"></i>${esc(PERSON.majors.cs)}</span><span><i class="sq st"></i>${esc(PERSON.majors.st)}</span></div>
       <p class="thesis">${esc(PERSON.thesis)}</p>
-      <div class="focus"><span class="cap">Focus</span><div class="what"><span>AI / ML engineering</span><i>+</i><span>Software engineering</span></div>
+      <div class="focus"><span class="cap">Focus</span><div class="what">${PERSON.focus.map(f => `<span>${esc(f)}</span>`).join('<i>+</i>')}</div>
         <span class="cap open"><span class="dot"></span>Open to internships · ${esc(PERSON.season)}</span></div>
       ${contactButtons()}
     </div>` }
@@ -441,61 +499,68 @@ function homeCard(id) {
     const live = ITEMS.projects.filter(p => p.live)
     const gh = PERSON.links.find(l => l.label === 'GitHub')
     const host = u => u.replace(/^https?:\/\//, '').replace(/\/$/, '')
-    const tile = (p, big) => {
+    const tile = p => {
       const v = p.preview || {}
-      const theme = v.bg ? ` style="--tbg:${v.bg};--tfg:${v.fg};--tac:${v.accent};--tacfg:${v.accentFg}"` : ''
-      return `<a class="tile${big && v.img ? ' big' : ''}" href="${p.live}" target="_blank" rel="noopener"${theme}>
-        ${big && v.img ? `<div class="shot"><img src="${v.img}" alt="${esc(v.alt || p.title)}" loading="lazy"><span class="badge"><span class="pulse"></span>Live site</span></div>` : ''}
+      return `<a class="tile" href="${p.live}" target="_blank" rel="noopener" aria-label="${esc(p.title)}: open the live site">
+        ${v.img ? `<div class="shot"><img src="${v.img}" alt="${esc(v.alt || p.title)}"${v.pos ? ` style="object-position:${v.pos}"` : ''}></div>` : ''}
         <div class="tbody">
-          <div class="brand">${v.icon === 'glasses' ? GLASSES : LEAF}<b>${esc(p.title)}</b><span class="url">${esc(host(p.live))}</span></div>
-          ${big ? `<p>${esc(v.pitch || p.summary)}</p>` : ''}
-          <span class="cta">${esc(v.cta || 'Visit site')}<span class="arr">→</span></span>
+          <div class="brand"><span class="dot"></span><b>${esc(p.title)}</b><span class="url">${esc(host(p.live))} ↗</span></div>
+          <p>${esc(v.pitch || p.summary)}</p>
         </div></a>`
     }
-    return { cls: 'corner livecard', html: `<div class="head"><h2>Live projects</h2><span class="go">${live.length ? `${live.length} live` : 'coming soon'}</span></div>
-      ${live.length ? `<div class="tiles">${live.map(p => tile(p, live.length === 1)).join('')}</div>`
-        : `<p class="blurb">Live versions of my projects are on the way. They will open from here.</p>
-           <div class="empty"><span class="dot" style="background:var(--faint)"></span>First live demos coming soon</div>
+    return { cls: 'corner livecard', html: `<div class="head"><h2>Live projects</h2><span class="go">${live.length ? `${live.length} deployed` : 'Coming soon'}</span></div>
+      ${live.length ? `<div class="tiles">${live.map(tile).join('')}</div>`
+        : `<p class="blurb">Nothing is deployed right now. The code for each project is on GitHub.</p>
+           <div class="empty"><span class="dot" style="background:var(--faint)"></span>No live demos yet</div>
            <div class="btnrow"><a class="btn" href="${gh.url}" target="_blank" rel="noopener">${ICON.github}Code on GitHub</a></div>`}` }
   }
   if (id === 'resume') return { zoom: 'resume', cls: 'resumecard', label: 'Resume: open the full resume', html: `<div class="head"><h2>Resume</h2><span class="go">Open →</span></div>
-    <div class="paperwrap">${resumeHTML(false)}</div>
-    <div class="btnrow">${dlButtons()}</div>` }
-  const list = ITEMS[id]
-  const right = it => id === 'experience' ? `<em class="${it.now ? 'now' : ''}">${it.now ? '<span class="dot"></span>now' : esc(it.yr)}</em>` : `<em>${esc(it.numbers[0][0])}</em>`
-  const blurb = id === 'experience' ? 'AI infrastructure, data engineering and backend.' : 'ML systems, from campus LLM serving to computer vision.'
-  return { go: id, cls: 'corner', label: `${SECTION[id].title}: open all`, html: `<div><div class="head"><h2>${SECTION[id].title}</h2><span class="go">${list.length} ${id === 'experience' ? 'roles' : 'projects'} →</span></div>
-    <p class="blurb">${blurb}</p></div>
-    <ul class="rows">${list.map((it, i) => `<li data-open="${id}:${i}" tabindex="0" role="button" aria-label="Open the ${esc(it.title)} write-up"><b>${esc(it.label || it.title)}</b><span>${esc(it.short)}</span>${right(it)}</li>`).join('')}</ul>` }
+    ${big ? `<div class="paperwrap" aria-hidden="true">${resumeHTML(false)}</div>` : ''}
+    <div class="btnrow"><a class="btn" href="${PDF.href}" download="${PDF.name}">${ICON.down}Download PDF</a><span class="btn">View</span></div>` }
+  const list = ITEMS[id], S = SECTION[id]
+  const right = it => id === 'experience' ? `<em class="${it.now ? 'now' : ''}">${it.now ? '<span class="dot"></span>Now' : esc(it.yr)}</em>` : `<em>${esc(it.numbers[0][0])}</em>`
+  return { go: id, cls: 'corner', label: `${S.title}: open all`, html: `<div><div class="head"><h2>${S.title}</h2><span class="go">${list.length} ${S.unit[list.length === 1 ? 0 : 1]} →</span></div>
+    <p class="blurb">${esc(S.blurb)}</p></div>
+    <ul class="rows">${list.map((it, i) => `<li data-open="${id}:${i}" tabindex="0" role="button" aria-label="Open ${esc(it.title)}"><b>${logo(it, 'sm')}${esc(it.label || it.title)}</b><span>${esc(it.short)}</span>${right(it)}</li>`).join('')}</ul>` }
 }
+// Roles and projects use the same card: logo and dates, name, role, one line, one number, and a plain way in
 function entryCard(it) {
-  return { zoom: 'item', item: it, cls: 'entry', label: `${it.title}: read more`, html: `<div class="etop"><span>${esc(it.dates)}</span>${it.now ? nowTag : ''}</div>
+  const sec = sectionOf(it), n = it.numbers && it.numbers[0]
+  return { zoom: 'item', item: it, cls: 'entry', label: `${it.title}: ${SECTION[sec].view.toLowerCase()}`, html: `<div class="etop">${logo(it)}${when(it)}</div>
     <div><h2>${esc(it.title)}</h2><div class="role">${esc(it.role)}</div></div>
-    <p class="sum">${esc(it.summary)}</p>
-    <div class="nums">${it.numbers.slice(0, 2).map(([n, l]) => `<div><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join('')}</div>
-    ${lensHTML(it.lens)}<div class="more"><span>Read more →</span><span class="btnrow">${projLinks(it)}</span></div>` }
+    <p class="sum">${esc(it.line || it.summary)}</p>
+    ${n ? `<div class="stat"><b>${esc(n[0])}</b><span>${esc(n[1])}</span></div>` : ''}
+    <div class="efoot"><span class="view">${esc(SECTION[sec].view)} <i>→</i></span>${it.live ? `<a class="livelink" href="${it.live}" target="_blank" rel="noopener"><span class="pulse"></span>Live site ↗</a>` : ''}</div>` }
 }
 const HOME = ['experience', 'resume', 'projects', 'live', 'about']
 
 // ---------- Long write-ups ----------
 function longHTML(kind, it) {
-  if (kind === 'item') return `<div class="kick"><span>${esc(it.dates)}</span>${it.now ? nowTag : ''}</div>
-    <h3>${esc(it.title)}</h3><p class="sub">${esc(it.role)}</p>
-    <p class="lede">${esc(it.summary)}</p>
-    <div class="cols">
-      <div><div class="sect">What I built</div><ol class="built">${it.built.map(([h, p], i) => `<li><span class="i">0${i + 1}</span><div><h4>${esc(h)}</h4><p>${esc(p)}</p></div></li>`).join('')}</ol></div>
-      <aside class="rail">${projLinks(it) ? `<div class="sect">Links</div><div class="btnrow">${projLinks(it)}</div>` : ''}
-        <div class="sect">By the numbers</div><dl class="bign">${it.numbers.map(([n, l]) => `<div><dt>${esc(n)}</dt><dd>${esc(l)}</dd></div>`).join('')}</dl>
-        <div class="sect">Draws on</div>${lensHTML(it.lens)}
-        <div class="sect">Stack</div><p class="stack">${it.tags.map(esc).join(' · ')}</p></aside>
-    </div>`
+  if (kind === 'item') {
+    const sec = sectionOf(it), job = sec === 'experience', v = it.preview || {}, links = projLinks(it)
+    return `<div class="ihead">${logo(it, 'lg')}<div><div class="iorg">${esc(job ? it.title : it.kind || 'Project')}</div><div class="kick">${when(it)}</div></div></div>
+    <h3 class="ititle">${esc(job ? it.role : it.title)}</h3>
+    ${job ? '' : `<p class="sub">${esc(it.role)}</p>`}
+    <div class="icols">
+      <div><div class="sect">${job ? 'What I did' : 'How it works'}</div>
+        <ol class="built">${points(it).map(([h, p], i) => `<li><span class="i">0${i + 1}</span><div>${h ? `<h4>${esc(h)}</h4>` : ''}<p>${figures(p)}</p></div></li>`).join('')}</ol></div>
+      <aside class="irail">
+        ${v.img || links ? `<div>${v.img ? `<a class="ishot" href="${it.live}" target="_blank" rel="noopener" aria-label="${esc(it.title)}: open the live site"><img src="${v.img}" alt="${esc(v.alt || it.title)}"${v.pos ? ` style="object-position:${v.pos}"` : ''}></a>` : ''}${links ? `<div class="btnrow">${links}</div>` : ''}</div>` : ''}
+        ${it.numbers && it.numbers.length ? `<div><div class="sect">Key numbers</div><dl class="stats">${it.numbers.map(([n, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`).join('')}</dl></div>` : ''}
+        <div><div class="sect">Details</div><dl class="facts">
+          ${it.org ? `<div><dt>${job ? 'Company' : 'Built at'}</dt><dd>${esc(it.org)}</dd></div>` : ''}
+          ${job && it.kind ? `<div><dt>Type</dt><dd>${esc(it.kind)}</dd></div>` : ''}
+          <div><dt>Dates</dt><dd>${esc(it.dates)}</dd></div></dl></div>
+        <div><div class="sect">Stack</div><ul class="chips">${it.tags.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>
+      </aside></div>`
+  }
   // resume
   const R = window.RESUME
   return `<div class="kick"><span>/resume</span></div><h3 style="margin-bottom:26px">Resume</h3>
     <div class="rcols">${resumeHTML(true)}
       <aside class="rrail"><div class="sect">Download</div>${dlButtons('primary')}
         <div class="sect">Jump to</div><div class="jump">${R.sections.map((s, i) => `<button type="button" data-jump="rs-${i}"><span>${esc(s.title)}</span><span>↓</span></button>`).join('')}</div>
-        <p class="hint">Hover an entry and click it to open its full write-up. “See details” opens that whole section.</p>
+        <p class="hint">Click a role or project on the page to open it. “See details” opens the whole section.</p>
         <div class="sect">Contact</div>${contactButtons()}</aside></div>`
 }
 
@@ -503,10 +568,20 @@ function longHTML(kind, it) {
 const backBtn = document.getElementById('back'), crumb = document.getElementById('crumb')
 let zoomState = null
 function chrome() {
-  backBtn.hidden = view === 'home' && !zoomState
-  const parts = [view !== 'home' && view, zoomState && zoomState.title].filter(Boolean)
-  crumb.innerHTML = parts.map(p => `<b>${esc(p)}</b>`).join(' / ')
+  const away = view !== 'home' || !!zoomState
+  backBtn.hidden = !away; document.body.classList.toggle('away', away)
+  // Home / Section / Item: everything before the last is a way back
+  const trail = away ? [['Home', 'home'], view !== 'home' && [SECTION[view].title, 'section'], zoomState && [zoomState.title]].filter(Boolean) : []
+  crumb.innerHTML = trail.map(([t, to], i) => i < trail.length - 1 ? `<button type="button" data-to="${to}">${esc(t)}</button><i>/</i>` : `<b aria-current="page">${esc(t)}</b>`).join('')
 }
+async function goHome() {
+  if (zoomState) await closeZoom()
+  if (view !== 'home') await go('home', backBtn)
+}
+crumb.addEventListener('click', e => {
+  const b = e.target.closest('[data-to]'); if (!b || busy) return
+  b.dataset.to === 'home' ? goHome() : closeZoom()
+})
 const centerOfStage = () => { const r = stageEl.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + Math.min(r.height, innerHeight - r.top) / 2 } }
 
 // ---------- Intro ----------
@@ -537,13 +612,16 @@ async function intro() {
     await addGroup(HOME.map(homeCard), els => homeLayout(5, els), centerOfStage(), 30)
     busy = false; return
   }
-  const R = homeLayout(5), A = R[4]
+  const about = make(homeCard('about'))
+  about.classList.add('compact'); about.style.transition = 'none'; about.style.visibility = 'hidden'; stageEl.append(about)
+  const R = homeLayout(5, [, , , , about]), A = R[4]
   const cx = A.x + A.w / 2, cy = A.y + A.h / 2, s0 = 128, g0 = 10
   const stageBox = stageEl.getBoundingClientRect(), P = { x: stageBox.left + cx, y: stageBox.top + cy }
   // 1. Four squares pop in, tight around the exact point the finished layout is centred on
   const square = [0, 1, 2, 3].map(i => ({ x: cx + (i % 2 ? g0 / 2 : -g0 / 2 - s0), y: cy + (i < 2 ? -g0 / 2 - s0 : g0 / 2), w: s0, h: s0 }))
   softRipple(P, .7)
-  const four = await addGroup(HOME.slice(0, 4).map(homeCard), square, P, 55, el => el.classList.add('compact'))
+  const four = await addGroup(HOME.slice(0, 4).map(id => homeCard(id, true)), square, P, 55, el => el.classList.add('compact'))
+  four[1].classList.add('big')
   await Kit.wait(120)
   const set = (el, x, y, ww, hh) => Object.assign(el.style, { left: x + 'px', top: y + 'px', width: ww + 'px', height: hh + 'px' })
   const corners = (w, h, gx, gy, ax, aw, off) => {
@@ -556,33 +634,40 @@ async function intro() {
   let shownC = false
   await springs(Object.values(grow), () => {
     corners(grow.cw.x, grow.ch.x, g0 / 2, g0, cx, 0, 0)
-    if (!shownC && grow.cw.x > s0 + (R[0].w - s0) * .6) { shownC = true; four.forEach(el => el.classList.remove('compact')) }
+    if (!shownC && grow.cw.x > s0 + (R[0].w - s0) * .93) { shownC = true; four.forEach(el => el.classList.remove('compact')) }
   }, 1200)
   four.forEach(el => el.classList.remove('compact'))
   fit(R)
   await Kit.wait(160)
   // 3. My card opens from the seam between them and shoves both columns out to their places
-  const about = make(homeCard('about'))
-  about.classList.add('compact'); about.style.transition = 'none'; stageEl.append(about); cards.push(about)
+  set(about, cx, cy, 0, 0); about.style.borderWidth = '0'; about.style.visibility = ''; stageEl.append(about); cards.push(about)
   const sp = {
     aw: { x: 0, v: 0, to: A.w, k: 190, c: 21 },               // my card's width: fast, slight overshoot
     ah: { x: 2 * R[0].h + g0, v: 0, to: A.h, k: 220, c: 30 },
     gx: { x: g0 / 2, v: 0, to: GAP, k: 220, c: 30 },
     gy: { x: g0, v: 0, to: GAP, k: 220, c: 30 },
     kick: { x: 0, v: 200, to: 0, k: 150, c: 13, delay: 200 }, // the shove: ~11px recoil, then back to contact
+    rh: { x: R[0].h, v: 0, to: R[1].h, k: 220, c: 30 },       // the resume card shrinks, live takes the rest
   }
   softRipple(P, 1.2)
   let shownA = false
+  const paper = four[1].querySelector('.paperwrap')
   await springs(Object.values(sp), () => {
     const aw = Math.max(0, sp.aw.x), ax = cx - aw / 2
     corners(R[0].w, R[0].h, sp.gx.x, sp.gy.x, ax, aw, sp.kick.x)
+    const top = cy - sp.gy.x / 2 - R[0].h
+    four[1].style.height = sp.rh.x + 'px'
+    if (paper) paper.style.opacity = Math.max(0, Math.min(1, (sp.rh.x - R[1].h - 50) / 70))
+    Object.assign(four[3].style, { top: top + sp.rh.x + sp.gy.x + 'px', height: 2 * R[0].h - sp.rh.x + 'px' })
     set(about, ax, cy - sp.ah.x / 2, aw, sp.ah.x)
     about.style.borderWidth = aw < 2 ? '0' : ''
-    if (!shownA && aw > A.w * .55) { shownA = true; about.classList.remove('compact') }
+    if (!shownA && aw > A.w * .88) { shownA = true; about.classList.remove('compact') }
   })
   cards.forEach((c, i) => { place(c, R[i], true); c.style.transition = ''; c.classList.remove('compact') })
   about.style.borderWidth = ''
-  busy = false
+  if (paper) { paperRO.unobserve(paper); paper.remove() }
+  four[1].classList.remove('big')
+  busy = false; relayout()
 }
 async function go(target, fromEl) {
   if (busy || target === view) return
@@ -617,15 +702,15 @@ function zoomTarget() {
 async function openZoom(src, { kind, item, card }) {
   if (busy || zoomState) return
   busy = true
-  const title = item ? item.title : kind
+  const title = item ? item.label || item.title : SECTION[kind].title
   const from = src.getBoundingClientRect(), to = zoomTarget()
   const z = document.createElement('section')
   z.className = 'zoom'
-  z.setAttribute('role', 'dialog'); z.setAttribute('aria-modal', 'true'); z.setAttribute('aria-label', title)
+  z.setAttribute('role', 'dialog'); z.setAttribute('aria-modal', 'true'); z.setAttribute('aria-label', item ? item.title : title)
   z.innerHTML = `${card ? `<div class="short">${card.innerHTML}</div>` : ''}<div class="long">${longHTML(kind, item)}</div><button class="x" type="button">Close ✕</button>`
   Object.assign(z.style, { left: to.x + 'px', top: to.y + 'px', width: to.w + 'px', height: to.h + 'px' })
   document.body.append(z)
-  zoomState = { el: z, src, card, title: title.toLowerCase() }
+  zoomState = { el: z, src, card, title }
   z.querySelector('.x').addEventListener('click', closeZoom)
   z.addEventListener('click', e => {
     const t = e.target
@@ -636,7 +721,7 @@ async function openZoom(src, { kind, item, card }) {
   })
   z.addEventListener('keydown', e => { const ent = e.target.closest && e.target.closest('[data-item]'); if (ent && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); ent.click() } })
   if (card) card.style.visibility = 'hidden'
-  stageEl.classList.add('dim'); chrome()
+  stageEl.classList.add('dim'); stageEl.inert = true; chrome()
   if (!Kit.reduced) {
     const sx = from.width / to.w, sy = from.height / to.h
     const opts = { duration: 500, easing: 'cubic-bezier(.2,.9,.25,1)' }
@@ -654,7 +739,7 @@ async function closeZoom() {
   busy = true
   const { el: z, src, card } = zoomState
   const to = src.getBoundingClientRect(), from = z.getBoundingClientRect()
-  stageEl.classList.remove('dim')
+  stageEl.classList.remove('dim'); stageEl.inert = false
   if (!Kit.reduced) {
     z.querySelector('.long').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' })
     await z.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${to.left - from.left}px,${to.top - from.top}px) scale(${to.width / from.width},${to.height / from.height})`, opacity: .4 }],
